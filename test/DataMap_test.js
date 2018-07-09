@@ -18,6 +18,12 @@ describe('Data', () => {
       events = eventsFn(dataMap);
     });
 
+    describe('type', () => {
+      it('should have the map type', () => {
+        expect(dataMap.type).toEqual(c.DATATYPE_MAP);
+      });
+    });
+
     describe('events', () => {
       describe('set', () => {
         beforeEach(() => {

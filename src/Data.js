@@ -6,108 +6,116 @@ export default (bottle) => {
   /**
    * the base class for Data variations
    */
-  class Data extends EventEmitter {
-    constructor(content, name) {
-      super();
-      this.content = content;
-      this.name = name || `data_${++Data._nextID}`;
-    }
+
+  bottle.factory('Data', (c) => {
+    class Data extends EventEmitter {
+      constructor(content, name) {
+        super();
+        this.content = content;
+        this.name = name || `data_${++Data._nextID}`;
+      }
 
 
-    set content(value) {
-      if (!value) throw new Error('content value not present');
-      if (this._content) {
-        this.replace(value);
-      } else {
-        this._content = observable(value);
-        try {
-          this.immediate = true;
-          this._contentOb = observe(this._content, change => this.onChange(change), {}, true);
-        } catch (err) {
-          this.immediate = false;
-          if (/(doesn't support the fire immediately property for observable objects)|(doesn't support fireImmediately=true in combination with maps)/
-            .test(err.message)) {
-            // eslint-disable-next-line max-len
-            this._contentOb = observe(this._content, change => this.onChange(change), {}, { deep: false });
-          } else {
-            throw err;
+      set content(value) {
+        if (!value) throw new Error('content value not present');
+        if (this._content) {
+          this.replace(value);
+        } else {
+          this._content = observable(value);
+          try {
+            this.immediate = true;
+            this._contentOb = observe(this._content, change => this.onChange(change), {}, true);
+          } catch (err) {
+            this.immediate = false;
+            if (/(doesn't support the fire immediately property for observable objects)|(doesn't support fireImmediately=true in combination with maps)/
+              .test(err.message)) {
+              // eslint-disable-next-line max-len
+              this._contentOb = observe(this._content, change => this.onChange(change), {}, { deep: false });
+            } else {
+              throw err;
+            }
           }
         }
       }
-    }
 
-    raw() {
-      return cloneDeep(this.content);
-    }
+      raw() {
+        return cloneDeep(this.content);
+      }
 
-    get content() {
-      return this._content;
-    }
+      get content() {
+        return this._content;
+      }
 
-    /**
-     * mobx object API methods
-     * @param value
-     */
-    replace(value) {
-      this.content.replace(value);
-    }
+      /**
+       * mobx object API methods
+       * @param value
+       */
+      replace(value) {
+        const valueType = c.dataType(value);
+        if (this.type !== valueType) {
+          throw new Error(`attempt to replace a ${this.type} with content of type ${valueType}`);
+        }
+        this.content.replace(value);
+      }
 
-    remove(key) {
-      remove(this.content, key);
-    }
+      remove(key) {
+        remove(this.content, key);
+      }
 
-    get values() {
-      return values(this.content);
-    }
+      get values() {
+        return values(this.content);
+      }
 
-    get keys() {
-      return keys(this.content);
-    }
+      get keys() {
+        return keys(this.content);
+      }
 
-    get entries() {
-      return entries(this.content);
-    }
+      get entries() {
+        return entries(this.content);
+      }
 
-    get(index) {
-      return get(this.content, index);
-    }
+      get(index) {
+        return get(this.content, index);
+      }
 
-    set(index, value) {
-      return set(this.content, index, value);
-    }
+      set(index, value) {
+        return set(this.content, index, value);
+      }
 
-    get type() {
-      throw new Error('must override');
-    }
+      get type() {
+        throw new Error('must override');
+      }
 
-    onChange(change) {
-      this.emit('change', { data: this.name, change });
+      onChange(change) {
+        this.emit('change', { data: this.name, change });
 
-      switch (change.type) {
-        case 'update':
-          this.emit('update', { data: this.name, change });
-          break;
+        switch (change.type) {
+          case 'update':
+            this.emit('update', { data: this.name, change });
+            break;
 
-        case 'add':
-          this.emit('add', { data: this.name, change });
-          break;
+          case 'add':
+            this.emit('add', { data: this.name, change });
+            break;
 
-        case 'delete':
-          this.emit('delete', { data: this.name, change });
-          this.emit('remove', { data: this.name, change });
-          break;
+          case 'delete':
+            this.emit('delete', { data: this.name, change });
+            this.emit('remove', { data: this.name, change });
+            break;
 
-        case 'remove':
-          this.emit('remove', { data: this.name, change });
-          break;
+          case 'remove':
+            this.emit('remove', { data: this.name, change });
+            break;
 
-        default:
-          this.emit('change-other', { data: this.name, change });
+          default:
+            this.emit('change-other', { data: this.name, change });
+        }
       }
     }
-  }
-  Data._nextID = 0;
-  bottle.constant('Data', Data);
+    Data._nextID = 0;
+
+    return Data;
+  });
 
   bottle.factory('DataMap', c => class DataMap extends c.Data {
     get type() {
@@ -127,7 +135,7 @@ export default (bottle) => {
 
     replace(value) {
       const valueKeys = Object.keys(value);
-      const deletedKeys = difference(this.keys, valueKeys, );
+      const deletedKeys = difference(this.keys, valueKeys);
       deletedKeys.forEach(key => this.remove(key));
       valueKeys.forEach(key => this.set(key, value[key]));
     }
@@ -178,12 +186,36 @@ export default (bottle) => {
       return c.DATATYPE_VALUE;
     }
 
-    set content(value) {
-      this._content = value;
+    set content(newValue) {
+      const oldValue = this._content || null;
+      this._content = newValue;
+      this.emit('change', {
+        data: this.name,
+        change: {
+          oldValue,
+          newValue,
+        },
+      });
+      this.emit('update', {
+        data: this.name,
+        change: {
+          oldValue,
+          newValue,
+        },
+      });
     }
 
     get content() {
       return this._content;
+    }
+
+    replace(value) {
+      this.content = value;
+    }
+
+    raw() {
+      if (this.content && typeof this.content === 'object') return cloneDeep(this.content);
+      return this.content;
     }
   });
 

@@ -18,6 +18,12 @@ describe('Data', () => {
       events = eventsFn(dataArray);
     });
 
+    describe('type', () => {
+      it('should have the array type', () => {
+        expect(dataArray.type).toEqual(c.DATATYPE_ARRAY);
+      });
+    });
+
     describe('events', () => {
       describe('set', () => {
         beforeEach(() => {

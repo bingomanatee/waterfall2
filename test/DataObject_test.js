@@ -19,6 +19,12 @@ describe('Data', () => {
       events = eventsFn(dataObject);
     });
 
+    describe('type', () => {
+      it('should have the map type', () => {
+        expect(dataObject.type).toEqual(c.DATATYPE_OBJECT);
+      });
+    });
+
     describe('events', () => {
       describe('set', () => {
         beforeEach(() => {
