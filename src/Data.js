@@ -15,6 +15,9 @@ export default (bottle) => {
         this.name = name || `data_${++Data._nextID}`;
       }
 
+      mapTo(...args) {
+        return new c.MapTo(this, ...args);
+      }
 
       set content(value) {
         if (!value) throw new Error('content value not present');
@@ -155,6 +158,10 @@ export default (bottle) => {
 
     splice(...args) {
       this.content.splice(...args);
+    }
+
+    remove(key) {
+      this.content.splice(key, 1);
     }
 
     onChange(change) {

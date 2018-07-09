@@ -44,6 +44,13 @@ describe('Data', () => {
           expect(msg.data).toEqual('someItems');
         });
 
+        it('should have the expected change', () => {
+          const msg = events.updates[0];
+          const { index, newValue } = msg.change;
+          expect(index).toEqual(2);
+          expect(newValue).toEqual(10);
+        });
+
         it('should produce the expected array', () => {
           expect(dataArray.values).toEqual([1, 2, 10, 4]);
         });
