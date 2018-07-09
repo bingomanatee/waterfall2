@@ -77,7 +77,10 @@ export default(bottle) => {
           break;
 
         case c.DATATYPE_MAP:
-          this.data.entries.forEach(([key, value]) => newTarget.set(key, this.filter(value, key)));
+          this.data.entries.forEach(([key, value]) => {
+            const newValue = this.filter(value, key);
+            return newTarget.set(key, newValue);
+          });
           break;
 
         default:
@@ -89,7 +92,7 @@ export default(bottle) => {
 
     getEmptyTo() {
       let out;
-      switch (c.dataType(this.target)) {
+      switch (this.target.type) {
         case c.DATATYPE_ARRAY:
           out = [];
           break;
@@ -109,6 +112,7 @@ export default(bottle) => {
         default:
           throw new Error('unhandled type');
       }
+      return out;
     }
 
     init() {
