@@ -19,6 +19,10 @@ export default (bottle) => {
         return new c.MapTo(this, ...args);
       }
 
+      callback(...args) {
+        return new c.CallbackTo(this, ...args);
+      }
+
       set content(value) {
         if (!value) throw new Error('content value not present');
         if (this._content) {

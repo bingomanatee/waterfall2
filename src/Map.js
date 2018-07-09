@@ -30,40 +30,44 @@ export default(bottle) => {
       }
     }
 
-    watchData() {
-      this.data.on('remove', ({ data, change: { index, name } }) => {
-        if (!this.target) return;
-        if (this.data.type === c.DATATYPE_ARRAY) {
-          this.target.remove(index);
-        } else this.target.remove(name);
-      });
-      this.data.on('splice', ({ change }) => {
-        if (!this.target) return;
-        const { index, removedCount, added } = change;
-        if (this.target.type === c.DATATYPE_ARRAY) {
-          // should only get this messages on array to array actions
-          const fAdded = [];
-          added.forEach((value, key) => {
-            fAdded.push(this.filter(value, key + index));
-          });
-          this.target.splice(index, removedCount, ...fAdded);
-        } else {
-          // there is no simple way to reconcile map splices to non-arrays;
-          this.setAll();
-        }
-      });
-      this.data.on('add', ({ change }) => this.onSet(change));
-      this.data.on('update', ({ change }) => this.onSet(change));
+    onRemove({ change: { index, name } }) {
+      if (!this.target) return;
+      if (this.data.type === c.DATATYPE_ARRAY) {
+        this.target.remove(index);
+      } else this.target.remove(name);
     }
 
-    onSet({ index, name, newValue }) {
+    onSplice({ change }) {
+      if (!this.target) return;
+      const { index, removedCount, added } = change;
+      if (this.target.type === c.DATATYPE_ARRAY) {
+        // should only get this messages on array to array actions
+        const fAdded = [];
+        added.forEach((value, key) => {
+          fAdded.push(this.filter(value, key + index));
+        });
+        this.target.splice(index, removedCount, ...fAdded);
+      } else {
+        // there is no simple way to reconcile map splices to non-arrays;
+        this.run();
+      }
+    }
+
+    watchData() {
+      this.data.on('remove', this.onRemove, this);
+      this.data.on('splice', this.onSplice, this);
+      this.data.on('add', this.onSet, this);
+      this.data.on('update', this.onSet, this);
+    }
+
+    onSet({ change: { index, name, newValue } }) {
       if (!this.target) return;
       const key = this.data.type === c.DATATYPE_ARRAY ? index : name;
       const value = this.filter(newValue, key);
       this.target.set(key, value);
     }
 
-    setAll() {
+    run() {
       if (!this.target) return;
       let newTarget = this.getEmptyTo();
 
@@ -116,7 +120,7 @@ export default(bottle) => {
     }
 
     init() {
-      this.setAll();
+      this.run();
     }
   });
 };
