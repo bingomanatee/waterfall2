@@ -1,19 +1,40 @@
 import { includes } from 'lodash';
 
+/**
+ * Callbacks are "Holistic" observers. Its central lever is a function that is called whenever
+ * a Data instance changes.
+ *
+ * There is a primary Data that the callback checks, but it can be a funnel for multiple
+ * Data objects, updating every time any one of them change.
+ *
+ * Callbacks work in one of two ways.
+ *
+ *  1) if there is no "target" designated, its just a "thing that is called" every time
+ *     a(or one of several) Data changes; this is a good way to bridge information
+ *     out of one Data object, or do other unions of several Data collections.
+ *
+ *  2) if there is a "target" and it is a Data, the result of the callback replaces
+ *     the entire "target"'s contents.
+ *
+ *  3) if there is a "target" and it is a function, that function is called with the result
+ *     of the callback  every time one of the watched Data changes. This is a good way to,
+ *     for instance, replace a field of a Data collection with the result of an operation.
+ *
+ * @param b
+ */
 export default(b) => {
   b.factory('CallbackTo', c => class CallbackTo {
-    constructor(from, callback, {
-      withData, target, targetKey,
-    }) {
+    constructor(from, callback, options = {}) {
+      const {
+        withData, target,
+      } = options;
+
       this._withMap = new Map();
       this._watchList = [];
       this.target = target;
-      this.targetKey = targetKey;
       this.withData = withData;
       this.from = from;
-
-      this.watchData();
-      this._callback = callback;
+      this.callback = callback;
     }
 
     get withData() {
@@ -61,12 +82,21 @@ export default(b) => {
       this._withObj[data.name] = data.content;
     }
 
+    /**
+     * watch links change in the parameter to trigger onChange.
+     *
+     * Both the primary (from) data collection and any "withs"
+     * pass through `._watch`.
+     *
+     * @param data {Data}
+     * @private
+     */
     _watch(data) {
       if (!data && data instanceof c.Data) {
         throw new Error('watch targets must be a Data instance.');
       }
       if (!includes(this._watchList, data.name)) {
-        data.on('change', this.onChange);
+        data.on('change', this.onChange, this);
         this._watchList.push(data.name);
       }
     }
@@ -76,13 +106,22 @@ export default(b) => {
      * it passes:
      * 1) the content of the from data
      * 2) the change (may be to from or any of the "with" data)
-     * 3) an object of any data atted to the "with" collection
+     * 3) an object of any data added to using the "with" method
      *
      * if there is a target, the result is
      * @param change
      */
     onChange(change) {
       const result = this.callback(this.from.content, change, this._withObj);
+      if (this.target) {
+        if (this.target instanceof c.Data) {
+          this.target.content = result;
+        } else if (typeof this.target === 'function') {
+          this.target(result, change, this);
+        } else {
+          throw new Error('strange target!');
+        }
+      }
     }
 
     with(data) {
@@ -103,7 +142,10 @@ export default(b) => {
      * @param target
      */
     set target(target) {
-      if (target && (!((typeof target === 'function') || (target instanceof c.Data)))) {
+      if (!target) {
+        this._target = null;
+      } else
+      if (!((typeof target === 'function') || (target instanceof c.Data))) {
         throw new Error('target must be instance of Data (or empty)');
       }
       this._target = target || null;

@@ -19,7 +19,7 @@ export default (bottle) => {
         return new c.MapTo(this, ...args);
       }
 
-      callback(...args) {
+      callbackTo(...args) {
         return new c.CallbackTo(this, ...args);
       }
 
