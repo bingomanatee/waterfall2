@@ -1,11 +1,12 @@
 import Bottle from 'bottlejs';
 import data from './Data';
 import map from './Map';
-import callbackTo from './CallbackTo';
+import filterTo from './filterTo';
+
 export default () => {
   const bottle = new Bottle();
   data(bottle);
   map(bottle);
-  callbackTo(bottle);
+  filterTo(bottle);
   return bottle;
 };

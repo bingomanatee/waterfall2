@@ -19,8 +19,8 @@ export default (bottle) => {
         return new c.MapTo(this, ...args);
       }
 
-      callbackTo(...args) {
-        return new c.CallbackTo(this, ...args);
+      filterTo(...args) {
+        return new c.filterTo(this, ...args);
       }
 
       set content(value) {

@@ -23,12 +23,8 @@ import { includes } from 'lodash';
  * @param b
  */
 export default(b) => {
-  b.factory('CallbackTo', c => class CallbackTo {
-    constructor(from, callback, options = {}) {
-      const {
-        withData, target,
-      } = options;
-
+  b.factory('filterTo', c => class FilterTo {
+    constructor(from, callback, target = null, ...withData) {
       this._withMap = new Map();
       this._watchList = [];
       this.target = target;
@@ -122,6 +118,10 @@ export default(b) => {
           throw new Error('strange target!');
         }
       }
+    }
+
+    init() {
+      return this.onChange(null);
     }
 
     with(data) {
