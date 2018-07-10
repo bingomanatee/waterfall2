@@ -9,9 +9,10 @@ import { includes } from 'lodash';
  *
  * Callbacks work in one of two ways.
  *
- *  1) if there is no "target" designated, its just a "thing that is called" every time
- *     a(or one of several) Data changes; this is a good way to bridge information
- *     out of one Data object, or do other unions of several Data collections.
+ *  1) if there is NO "target" designated, its just a "change callback",
+ *    triggered every time the Data (or a data in withData) changes;
+ *    this is a good way to bridge information out of one Data object,
+ *    or do other unions of several Data collections.
  *
  *  2) if there is a "target" and it is a Data, the result of the callback replaces
  *     the entire "target"'s contents.
@@ -20,17 +21,18 @@ import { includes } from 'lodash';
  *     of the callback  every time one of the watched Data changes. This is a good way to,
  *     for instance, replace a field of a Data collection with the result of an operation.
  *
+ * note - the result of reduction is an instance of the same type as the target
  * @param b
  */
 export default(b) => {
-  b.factory('filterTo', c => class FilterTo {
-    constructor(from, callback, target = null, ...withData) {
+  b.factory('Modifier', c => class ReduceTo {
+    constructor(from, callback, target, ...withData) {
       this._withMap = new Map();
       this._watchList = [];
       this.target = target;
-      this.withData = withData;
       this.from = from;
       this.callback = callback;
+      this.withData = withData;
     }
 
     get withData() {
@@ -69,6 +71,7 @@ export default(b) => {
       if (!data && data instanceof c.Data) {
         throw new Error('withs must be a Data instance.');
       }
+      if (this._withMap.has(data.name)) return;
       this._withMap.set(data.name, data);
       this._watch(data);
 
@@ -84,7 +87,7 @@ export default(b) => {
      * Both the primary (from) data collection and any "withs"
      * pass through `._watch`.
      *
-     * @param data {Data}
+     * @param data {c.Data}
      * @private
      */
     _watch(data) {
@@ -92,38 +95,33 @@ export default(b) => {
         throw new Error('watch targets must be a Data instance.');
       }
       if (!includes(this._watchList, data.name)) {
-        data.on('change', this.onChange, this);
+        this._watchData(data);
         this._watchList.push(data.name);
       }
     }
 
+    _watchData(data) {
+      data.on('change', this.onChange, this);
+    }
+
     /**
-     * triggered whenever the "from" data or any of the "withs" changes.
-     * it passes:
-     * 1) the content of the from data
-     * 2) the change (may be to from or any of the "with" data)
-     * 3) an object of any data added to using the "with" method
-     *
-     * if there is a target, the result is
+     * the action that gets triggered on a change of from or a with Data.
+     * note that when you manually initialize the modifier, there will be no change.
      * @param change
      */
     onChange(change) {
-      const result = this.callback(this.from.content, change, this._withObj);
-      if (this.target) {
-        if (this.target instanceof c.Data) {
-          this.target.content = result;
-        } else if (typeof this.target === 'function') {
-          this.target(result, change, this);
-        } else {
-          throw new Error('strange target!');
-        }
-      }
+      throw new Error('must override');
     }
 
     init() {
       return this.onChange(null);
     }
 
+    /**
+     * a curried way to add a with after construction;
+     * @param data
+     * @returns {ReduceTo}
+     */
     with(data) {
       this._addWith(data);
       return this;
@@ -136,16 +134,12 @@ export default(b) => {
     /**
      * target is either
      * a Data instance (which is replaced on change)
-     * OR a function that the result is passed to,
-     * OR a falsy value.
+     * OR a function that the result is passed to.
      *
      * @param target
      */
     set target(target) {
-      if (!target) {
-        this._target = null;
-      } else
-      if (!((typeof target === 'function') || (target instanceof c.Data))) {
+      if (target && !((typeof target === 'function') || (target instanceof c.Data))) {
         throw new Error('target must be instance of Data (or empty)');
       }
       this._target = target || null;

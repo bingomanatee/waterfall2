@@ -20,7 +20,7 @@ export default (bottle) => {
       }
 
       filterTo(...args) {
-        return new c.filterTo(this, ...args);
+        return new c.FilterTo(this, ...args);
       }
 
       set content(value) {

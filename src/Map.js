@@ -5,34 +5,15 @@ export default(bottle) => {
    * MapTo establishes a relationship between two data objects
    * that copies filtered values from source to destination keys.
    */
-  bottle.factory('MapTo', c => class MapTo {
-    constructor(data, filter, target) {
+  bottle.factory('MapTo', c => class MapTo extends c.Modifier {
+    constructor(data, ...args) {
       if (data.type === c.DATATYPE_VALUE) throw new Error('cannot MapTo values');
-      this.data = data;
-      this.filter = filter;
-      this.watchData();
-
-      if (target) {
-        this.target = target;
-      }
-    }
-
-    get target() {
-      return this._target;
-    }
-
-    set target(value) {
-      if (this._target) {
-        throw new Error('cannot re-set MapTo Target');
-      } else {
-        this._target = value;
-        this.init();
-      }
+      super(data, ...args);
     }
 
     onRemove({ change: { index, name } }) {
       if (!this.target) return;
-      if (this.data.type === c.DATATYPE_ARRAY) {
+      if (this.from.type === c.DATATYPE_ARRAY) {
         this.target.remove(index);
       } else this.target.remove(name);
     }
@@ -44,45 +25,57 @@ export default(bottle) => {
         // should only get this messages on array to array actions
         const fAdded = [];
         added.forEach((value, key) => {
-          fAdded.push(this.filter(value, key + index));
+          fAdded.push(this.callback(value, key + index, this._withObj));
         });
         this.target.splice(index, removedCount, ...fAdded);
       } else {
         // there is no simple way to reconcile map splices to non-arrays;
-        this.run();
+        this.execute();
       }
     }
 
-    watchData() {
-      this.data.on('remove', this.onRemove, this);
-      this.data.on('splice', this.onSplice, this);
-      this.data.on('add', this.onSet, this);
-      this.data.on('update', this.onSet, this);
+    _watchData(data) {
+      if (data.name === this.from.name) {
+        data.on('remove', this.onRemove, this);
+        data.on('splice', this.onSplice, this);
+        data.on('add', this.onSet, this);
+        data.on('update', this.onSet, this);
+      } else {
+        super._watchData(data);
+      }
     }
 
     onSet({ change: { index, name, newValue } }) {
       if (!this.target) return;
-      const key = this.data.type === c.DATATYPE_ARRAY ? index : name;
-      const value = this.filter(newValue, key);
+      const key = this.from.type === c.DATATYPE_ARRAY ? index : name;
+      const value = this.callback(newValue, key);
       this.target.set(key, value);
     }
 
-    run() {
+    /**
+     * map all thje values
+     */
+    map() {
       if (!this.target) return;
       let newTarget = this.getEmptyTo();
 
       switch (this.target.type) {
         case c.DATATYPE_ARRAY:
-          newTarget = this.data.values.map(this.filter);
+          newTarget = this.from.values.map((value, key) => {
+            const result = this.callback(value, key, this._withObj);
+            return result;
+          });
           break;
 
         case c.DATATYPE_OBJECT:
-          this.data.entries.forEach(([key, value]) => newTarget[key] = this.filter(value, key));
+          this.from.entries.forEach(([key, value]) => {
+            newTarget[key] = this.callback(value, key, this._withObj);
+          });
           break;
 
         case c.DATATYPE_MAP:
-          this.data.entries.forEach(([key, value]) => {
-            const newValue = this.filter(value, key);
+          this.from.entries.forEach(([key, value]) => {
+            const newValue = this.callback(value, key, this._withObj);
             return newTarget.set(key, newValue);
           });
           break;
@@ -120,7 +113,11 @@ export default(bottle) => {
     }
 
     init() {
-      this.run();
+      this.map();
+    }
+
+    execute() {
+      this.map();
     }
   });
 };

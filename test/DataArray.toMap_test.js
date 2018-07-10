@@ -27,7 +27,7 @@ describe('Data', () => {
               return 0;
             }
             return 10 * n;
-          }, targetMap);
+          }, targetMap).init();
           events = eventsFn(targetMap);
         });
 
@@ -98,7 +98,7 @@ describe('Data', () => {
         let targetArray;
         beforeEach(() => {
           targetArray = c.toData([], 'bigNumbers');
-          dataArray.mapTo(n => 10 * n, targetArray);
+          dataArray.mapTo(n => 10 * n, targetArray).init();
           events = eventsFn(targetArray);
         });
 
