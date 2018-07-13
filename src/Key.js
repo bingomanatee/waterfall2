@@ -2,32 +2,41 @@
 
 export default(bottle) => {
   /**
-   * MapTo establishes a relationship between two data objects
-   * that copies filtered values from source to destination keys.
+   * This is a reverse of MapTo = it stores values in the target (unchanged)
+   * by a key determined by the callback. The assumption here is that
+   * (a) the result of key should not change once determined, and
+   * (b) the result of key souuld be unique across the domain.
    */
-  bottle.factory('MapTo', c => class MapTo extends c.Modifier {
-    constructor(data, ...args) {
-      if (data.type === c.DATATYPE_VALUE) throw new Error('cannot MapTo values');
-      super(data, ...args);
+  bottle.factory('Key', c => class KeyTo extends c.Modifier {
+    constructor(data, callback, target) {
+      if (!(target && c.typeof(target) === 'Data')) {
+        throw new Error('must have a data target');
+      }
+      super(data, callback, target);
     }
 
-    onRemove({ change: { index, name } }) {
-      if (!this.target) return;
-      if (this.from.type === c.DATATYPE_ARRAY) {
-        this.target.remove(index);
-      } else this.target.remove(name);
+    onRemove({ change }) {
+      const { index, name } = change;
+      const key = (this.from.type === c.DATATYPE_ARRAY) ? index : name;
+      const value = this.from.get(key);
+      this.target.remove(this.callback(value, key, change, this));
     }
 
     onSplice({ change }) {
       if (!this.target) return;
-      const { index, removedCount, added } = change;
+      const {
+        added, removed,
+      } = change;
       if (this.target.type === c.DATATYPE_ARRAY) {
         // should only get this messages on array to array actions
-        const fAdded = [];
-        added.forEach((value, key) => {
-          fAdded.push(this.callback(value, key + index, this._withObj));
+        removed.forEach((value, key) => {
+          const targetKey = this.callback(value, key, change, this);
+          this.target.remove(targetKey);
         });
-        this.target.splice(index, removedCount, ...fAdded);
+        added.forEach((value, key) => {
+          const targetKey = this.callback(value, key, change, this);
+          this.target.set(targetKey, value);
+        });
       } else {
         // there is no simple way to reconcile map splices to non-arrays;
         this.execute();
@@ -36,9 +45,9 @@ export default(bottle) => {
 
     _watchData(data) {
       if (data.name === this.from.name) {
+        data.on('replace', this.onSet, this);
         data.on('remove', this.onRemove, this);
         data.on('splice', this.onSplice, this);
-        data.on('replace', this.map, this);
         data.on('add', this.onSet, this);
         data.on('update', this.onSet, this);
       } else {
@@ -46,16 +55,11 @@ export default(bottle) => {
       }
     }
 
-    onSet({ target, change }) {
-      const { index, name, newValue } = change;
+    onSet({ change: { index, name, newValue } }) {
       if (!this.target) return;
       const key = this.from.type === c.DATATYPE_ARRAY ? index : name;
-      try {
-        const value = this.callback(newValue, key);
-        this.target.set(key, value);
-      } catch (err) {
-        console.log('failed on change: ', target, change);
-      }
+      const value = this.callback(newValue, key);
+      this.target.set(key, value);
     }
 
     /**
@@ -63,26 +67,28 @@ export default(bottle) => {
      */
     map() {
       if (!this.target) return;
-      let newTarget = this.getEmptyTo();
+      const newTarget = this.getEmptyTo();
 
       switch (this.target.type) {
         case c.DATATYPE_ARRAY:
-          newTarget = this.from.values.map((value, key) => {
-            const result = this.callback(value, key, this._withObj);
-            return result;
+          this.from.values.map((value, key) => {
+            const newKey = this.callback(value, key, this._withObj);
+            newTarget[newKey] = value;
+            return newKey;
           });
           break;
 
         case c.DATATYPE_OBJECT:
           this.from.entries.forEach(([key, value]) => {
-            newTarget[key] = this.callback(value, key, this._withObj);
+            const newKey = this.callback(value, key, this._withObj);
+            newTarget[newKey] = value;
           });
           break;
 
         case c.DATATYPE_MAP:
           this.from.entries.forEach(([key, value]) => {
-            const newValue = this.callback(value, key, this._withObj);
-            return newTarget.set(key, newValue);
+            const newKey = this.callback(value, key, this._withObj);
+            newTarget.set(newKey, value);
           });
           break;
 
@@ -90,7 +96,7 @@ export default(bottle) => {
           throw new Error('unhandled type');
       }
 
-      this.target.content = newTarget;
+      this.target.replace(newTarget);
     }
 
     getEmptyTo() {

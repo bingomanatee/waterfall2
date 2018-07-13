@@ -1,6 +1,7 @@
-import { observable, observe, entries, remove, values, keys, get, set } from 'mobx';
+import { difference, cloneDeep, includes, first, last } from 'lodash';
 import EventEmitter from 'eventemitter3';
-import { difference, cloneDeep } from 'lodash';
+
+const KNOWN_TYPES = 'add,remove,delete,replace,change,update'.split(',');
 
 export default (bottle) => {
   /**
@@ -19,30 +20,25 @@ export default (bottle) => {
         return new c.MapTo(this, ...args);
       }
 
+      key(...args) {
+        return new c.Key(this, ...args);
+      }
+
       filterTo(...args) {
         return new c.FilterTo(this, ...args);
       }
 
+      reduceTo(...args) {
+        return new c.ReduceTo(this, ...args);
+      }
+
+      get entries() {
+        return Array.from(this.content.entries());
+      }
+
       set content(value) {
-        if (!value) throw new Error('content value not present');
-        if (this._content) {
-          this.replace(value);
-        } else {
-          this._content = observable(value);
-          try {
-            this.immediate = true;
-            this._contentOb = observe(this._content, change => this.onChange(change), {}, true);
-          } catch (err) {
-            this.immediate = false;
-            if (/(doesn't support the fire immediately property for observable objects)|(doesn't support fireImmediately=true in combination with maps)/
-              .test(err.message)) {
-              // eslint-disable-next-line max-len
-              this._contentOb = observe(this._content, change => this.onChange(change), {}, { deep: false });
-            } else {
-              throw err;
-            }
-          }
-        }
+        this._content = value;
+        this.onChange({ type: 'replace', content: value });
       }
 
       raw() {
@@ -53,40 +49,47 @@ export default (bottle) => {
         return this._content;
       }
 
-      /**
-       * mobx object API methods
-       * @param value
-       */
       replace(value) {
         const valueType = c.dataType(value);
         if (this.type !== valueType) {
-          throw new Error(`attempt to replace a ${this.type} with content of type ${valueType}`);
+          throw new Error(`attempt to replace in ${this.name} a ${this.type.toString()} with content of type ${valueType.toString()}`);
         }
-        this.content.replace(value);
+        this.content = value;
       }
 
       remove(key) {
-        remove(this.content, key);
+        throw new Error('override');
       }
 
       get values() {
-        return values(this.content);
+        throw new Error('override');
       }
 
       get keys() {
-        return keys(this.content);
+        throw new Error('override');
       }
 
-      get entries() {
-        return entries(this.content);
+      has(index) {
+        throw new Error('override');
       }
 
       get(index) {
-        return get(this.content, index);
+        return this.content[index];
       }
 
-      set(index, value) {
-        return set(this.content, index, value);
+      set(name, value) {
+        if (this.has(name)) {
+          const oldValue = this.get(name);
+          this.content[name] = value;
+          this.onChange({
+            type: 'update', name, index: name, oldValue, newValue: value,
+          });
+        } else {
+          this.content[name] = value;
+          this.onChange({
+            type: 'add', name, index: name, newValue: value,
+          });
+        }
       }
 
       get type() {
@@ -94,28 +97,27 @@ export default (bottle) => {
       }
 
       onChange(change) {
+        this._sendChange(change);
+      }
+
+      _sendChange(change) {
         this.emit('change', { data: this.name, change });
 
+        this.emit(change.type, { data: this.name, change });
+
+        // eslint-disable-next-line default-case
         switch (change.type) {
-          case 'update':
-            this.emit('update', { data: this.name, change });
-            break;
-
-          case 'add':
-            this.emit('add', { data: this.name, change });
-            break;
-
           case 'delete':
-            this.emit('delete', { data: this.name, change });
             this.emit('remove', { data: this.name, change });
             break;
 
           case 'remove':
-            this.emit('remove', { data: this.name, change });
+            this.emit('delete', { data: this.name, change });
             break;
+        }
 
-          default:
-            this.emit('change-other', { data: this.name, change });
+        if (!includes(KNOWN_TYPES, change.type)) {
+          this.emit('change-other', { data: this.name, change });
         }
       }
     }
@@ -132,6 +134,47 @@ export default (bottle) => {
     raw() {
       const myEntries = this.entries.map(([key, value]) => [key, cloneDeep(value)]);
       return new Map(myEntries);
+    }
+
+    get(name) {
+      return this.content.get(name);
+    }
+
+    get keys() {
+      return this.content.keys();
+    }
+
+    get values() {
+      return this.content.values();
+    }
+
+    set(name, value) {
+      if (typeof name === 'undefined') throw new Error('cannot set undefined', name);
+      if (this.has(name)) {
+        const oldValue = this.get(name);
+        this.content.set(name, value);
+        this.onChange({
+          type: 'update',
+          change: { name, oldValue, newValue: value },
+        });
+      } else {
+        this.content.set(name, value);
+        this.onChange({
+          type: 'add',
+          change: { name, newValue: value },
+        });
+      }
+    }
+
+    has(index) {
+      return this.content.has(index);
+    }
+
+    remove(key) {
+      if (!this.has(key)) return;
+      const oldValue = this.get(key);
+      this.content.remove(key);
+      this.onChange({ type: 'remove', name: key, oldValue });
     }
   });
 
@@ -153,6 +196,29 @@ export default (bottle) => {
         return out;
       }, {});
     }
+    get keys() {
+      return Object.keys(this.content);
+    }
+
+    get values() {
+      return Object.values(this.content);
+    }
+
+    get entries() {
+      return Object.entries(this.content);
+    }
+
+    remove(key) {
+      if (!this.has(key)) return;
+      const oldValue = this.content[key];
+      delete this.content[key];
+      this.onChange({ type: 'remove', name: key, oldValue });
+    }
+
+    has(index) {
+      // eslint-disable-next-line no-prototype-builtins
+      return this.content.hasOwnProperty(index);
+    }
   });
 
   bottle.factory('DataArray', c => class DataMap extends c.Data {
@@ -160,12 +226,41 @@ export default (bottle) => {
       return c.DATATYPE_ARRAY;
     }
 
-    splice(...args) {
-      this.content.splice(...args);
+    splice(index, removedCount, ...added) {
+      const removed = this.slice(index, removedCount);
+      const addedCount = added.length;
+
+      const result = this.content.splice(index, removedCount, ...added);
+      this.onChange({
+        type: 'splice', index, added, removed, addedCount, removedCount,
+      });
+      return result;
+    }
+    slice(...args) { return this.content.slice(...args); }
+    push(...added) {
+      this.splice(this.content.length, 0, ...added);
+    }
+    pop() {
+      if (!this.length) return null;
+      const result = last(this.content);
+      this.splice(this.length - 1, 1);
+      return result;
+    }
+    unshift(...added) {
+      return this.splice(0, 0, ...added);
+    }
+    get length() {
+      return this.content.length;
+    }
+    shift() {
+      if (!this.length) return null;
+      const out = first(this.content);
+      this.splice(0, 1);
+      return out;
     }
 
     remove(key) {
-      this.content.splice(key, 1);
+      this.splice(key, 1);
     }
 
     onChange(change) {
@@ -184,8 +279,26 @@ export default (bottle) => {
       return this.content.map(cloneDeep);
     }
 
+    set(index, value) {
+      for (let i = this.length; i < index; ++i) {
+        super.set(i);
+      }
+      super.set(index, value);
+    }
+
     onSplice(change) {
       this.emit('splice', { data: this.name, change });
+    }
+    get keys() {
+      return this.content.keys;
+    }
+
+    get values() {
+      return this.content.slice(0);
+    }
+
+    has(index) {
+      return index === Math.round(index) && index >= 0 && index < this.content.length;
     }
   });
 
@@ -229,11 +342,6 @@ export default (bottle) => {
       return this.content;
     }
   });
-
-  bottle.constant('DATATYPE_MAP', Symbol('DATATYPE_MAP'));
-  bottle.constant('DATATYPE_OBJECT', Symbol('DATATYPE_OBJECT'));
-  bottle.constant('DATATYPE_ARRAY', Symbol('DATATYPE_ARRAY'));
-  bottle.constant('DATATYPE_VALUE', Symbol('DATATYPE_VALUE'));
 
   bottle.factory('dataType', c => (item) => {
     if (item === null) return c.DATATYPE_VALUE;

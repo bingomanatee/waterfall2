@@ -70,8 +70,9 @@ describe('Data', () => {
             });
 
             it('should trigger the expected events', () => {
-              expect(events.changes.length).toEqual(4);
-              expect(events.updates.length).toEqual(1);
+              //  console.log('target events: ', JSON.stringify(events, true, 2));
+              expect(events.changes.length).toEqual(3);
+              expect(events.updates.length).toEqual(0);
               expect(events.adds.length).toEqual(3);
               expect(events.removes.length).toEqual(0);
               expect(events.splices.length).toEqual(0);
@@ -79,7 +80,6 @@ describe('Data', () => {
             });
 
             it('should produce the expected target', () => {
-              // console.log('target events: ', JSON.stringify(fromEvents.changes, true, 2));
               expect(targetMap.entries).toEqual([
                 [0, 10],
                 [1, 20],

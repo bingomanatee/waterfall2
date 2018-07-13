@@ -91,7 +91,7 @@ export default(b) => {
      * @private
      */
     _watch(data) {
-      if (!data && data instanceof c.Data) {
+      if (!c.typeof(data) === 'Data') {
         throw new Error('watch targets must be a Data instance.');
       }
       if (!includes(this._watchList, data.name)) {
@@ -101,7 +101,15 @@ export default(b) => {
     }
 
     _watchData(data) {
-      data.on('change', this.onChange, this);
+      if (!(c.typeof(data) === 'Data')) {
+        console.log('bad watch: ', data);
+        throw new Error('watch targets must be a Data instance.');
+      }
+      try {
+        data.on('change', this.onChange, this);
+      } catch (err) {
+        console.log('bad watch: ', data, err);
+      }
     }
 
     /**
@@ -115,6 +123,24 @@ export default(b) => {
 
     init() {
       return this.onChange(null);
+    }
+
+    toNew(type, name, initialize = false) {
+      this.target = c.toData(c.blankOf(type), name);
+      if (initialize) this.init();
+      return this;
+    }
+
+    toNewArray(name, initialize = false) {
+      return this.toNew(c.DATATYPE_ARRAY, name, initialize);
+    }
+
+    toNewMap(name, initialize = false) {
+      return this.toNew(c.DATATYPE_MAP, name, initialize);
+    }
+
+    toNewObject(name, initialize = false) {
+      return this.toNew(c.DATATYPE_OBJECT, name, initialize);
     }
 
     /**
