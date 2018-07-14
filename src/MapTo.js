@@ -11,6 +11,8 @@ export default(bottle) => {
       super(data, ...args);
     }
 
+    get modifierType() { return 'MapTo'; }
+
     onRemove({ change: { index, name } }) {
       if (!this.target) return;
       if (this.from.type === c.DATATYPE_ARRAY) {
@@ -34,7 +36,7 @@ export default(bottle) => {
       }
     }
 
-    _watchData(data) {
+    _emitToData(data) {
       if (data.name === this.from.name) {
         data.on('remove', this.onRemove, this);
         data.on('splice', this.onSplice, this);
@@ -42,7 +44,7 @@ export default(bottle) => {
         data.on('add', this.onSet, this);
         data.on('update', this.onSet, this);
       } else {
-        super._watchData(data);
+        super._emitToData(data);
       }
     }
 
@@ -58,30 +60,34 @@ export default(bottle) => {
       }
     }
 
+    onChange() {
+      this.map();
+    }
+
     /**
      * map all thje values
      */
     map() {
       if (!this.target) return;
       let newTarget = this.getEmptyTo();
-
+      const withObj = this._withObj;
       switch (this.target.type) {
         case c.DATATYPE_ARRAY:
           newTarget = this.from.values.map((value, key) => {
-            const result = this.callback(value, key, this._withObj);
+            const result = this.callback(value, key, withObj);
             return result;
           });
           break;
 
         case c.DATATYPE_OBJECT:
           this.from.entries.forEach(([key, value]) => {
-            newTarget[key] = this.callback(value, key, this._withObj);
+            newTarget[key] = this.callback(value, key, withObj);
           });
           break;
 
         case c.DATATYPE_MAP:
           this.from.entries.forEach(([key, value]) => {
-            const newValue = this.callback(value, key, this._withObj);
+            const newValue = this.callback(value, key, withObj);
             return newTarget.set(key, newValue);
           });
           break;

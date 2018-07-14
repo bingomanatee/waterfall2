@@ -15,7 +15,7 @@ export default() => {
   b.factory(
     'usersToSortedIDs',
     container => container.users.filterTo(
-      userList => _(userList).sortBy('lastName', 'firstName', 'id').map('id').value(),
+      userList => _(userList).sortBy('lastName', 'firstName', 'email', 'id').map('id').value(),
       container.sortedUserIDs,
     ).init(),
   );
@@ -34,11 +34,16 @@ export default() => {
   b.constant('foundIndexes', c.toData([], 'foundIndexes'));
 
   b.factory('searchToFoundIndexes', (container) => {
-    container.searchTerms.reduceTo((memo, term, id, change, { searchPhrase }) => {
-      if (!searchPhrase) memo.push(id);
-      else if (term.indexOf(searchPhrase.toLowerCase()) > -1) memo.push(id);
-      return memo;
-    }, container.foundIndexes)
+    container.searchTerms.reduceTo(
+      (memo, term, id, change, { searchPhrase }) => {
+        if (!searchPhrase) memo.push(id);
+        else if (term.indexOf(searchPhrase) > -1) {
+          memo.push(id);
+        }
+        return memo;
+      },
+      container.foundIndexes,
+    )
       .with(container.searchPhrase)
       .init();
   });
@@ -47,13 +52,7 @@ export default() => {
   b.factory(
     'sortFoundIndexes',
     con => con.sortedUserIDs
-      .filterTo((sIDs, change, { foundIndexes }) => {
-        console.log('sIDs: ', sIDs.slice(0, 10));
-        console.log('foundIndexes: ', foundIndexes.slice(0, 10));
-        const union = _.intersect(sIDs, foundIndexes);
-        console.log('union', union.slice(0, 10));
-        return union;
-      })
+      .filterTo((sIDs, change, { foundIndexes }) => _.intersection(sIDs, foundIndexes))
       .into(con.sortedFoundIndexes)
       .with(con.foundIndexes)
       .init(),
@@ -65,11 +64,7 @@ export default() => {
   b.factory(
     'foundIndexesToChunks',
     con => con.sortedFoundIndexes
-      .filterTo((ids, ch, { pageSize }) => {
-        const out = _.chunk(ids, pageSize);
-        console.log('out: ', out.slice(0, 10));
-        return out;
-      })
+      .filterTo((ids, ch, { pageSize }) => _.chunk(ids, pageSize))
       .with(con.pageSize)
       .into(con.chunkedIDs)
       .init(),
@@ -86,5 +81,49 @@ export default() => {
     .into(con.finalUsers)
     .init());
 
+  const chunkedIDRenderer = list => `[${list.join(', ')}]`;
+  const userRenderer = user => (!user ? '(none)' : `${user.firstName} ${user.lastName} ${user.email}`);
+  b.factory('report', con => (maxItems, maxFound = 0) => {
+    const out = [
+      con.users.toTable({
+        isHorizontal: false,
+        maxItems,
+        cellRenderer: userRenderer,
+      }),
+      con.usersByID.toTable({
+        isHorizontal: false,
+        maxItems,
+        cellRenderer: userRenderer,
+      }),
+      con.sortedUserIDs.toTable({
+        isHorizontal: true,
+        maxItems,
+      }),
+      con.searchTerms.toTable({
+        isHorizontal: false,
+        maxItems,
+      }),
+      con.foundIndexes.toTable({
+        isHorizontal: true,
+        maxItems: Math.max(maxFound, maxItems),
+      }),
+      con.sortedFoundIndexes.toTable({
+        isHorizontal: true,
+        maxItems: Math.max(maxFound, maxItems),
+      }),
+
+      con.chunkedIDs.toTable({
+        isHorizontal: false,
+        cellRenderer: chunkedIDRenderer,
+        maxItems,
+      }),
+
+      con.pageSize.toTable(),
+      con.page.toTable(),
+      con.searchPhrase.toTable(),
+    ];
+
+    return out.join('\n');
+  });
   return b.container;
 };

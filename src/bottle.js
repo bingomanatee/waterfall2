@@ -1,6 +1,11 @@
 import Bottle from 'bottlejs';
 import data from './Data';
-import map from './Map';
+import dataValue from './DataValue';
+import dataArray from './DataArray';
+import dataMap from './DataMap';
+import dataObject from './DataObject';
+
+import map from './MapTo';
 import filterTo from './FilterTo';
 import modifier from './Modifier';
 import reduceTo from './ReduceTo';
@@ -10,6 +15,10 @@ import key from './Key';
 export default () => {
   const b = new Bottle();
   data(b);
+  dataValue(b);
+  dataArray(b);
+  dataMap(b);
+  dataObject(b);
   map(b);
   modifier(b);
   filterTo(b);

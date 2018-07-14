@@ -15,6 +15,8 @@ export default(bottle) => {
       super(data, callback, target);
     }
 
+    get modifierType() { return 'KeyTo'; }
+
     onRemove({ change }) {
       const { index, name } = change;
       const key = (this.from.type === c.DATATYPE_ARRAY) ? index : name;
@@ -43,7 +45,7 @@ export default(bottle) => {
       }
     }
 
-    _watchData(data) {
+    _emitToData(data) {
       if (data.name === this.from.name) {
         data.on('replace', this.onSet, this);
         data.on('remove', this.onRemove, this);
@@ -51,7 +53,7 @@ export default(bottle) => {
         data.on('add', this.onSet, this);
         data.on('update', this.onSet, this);
       } else {
-        super._watchData(data);
+        super._emitToData(data);
       }
     }
 

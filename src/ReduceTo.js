@@ -18,6 +18,8 @@ import { flattenDeep } from 'lodash';
  */
 export default(b) => {
   b.factory('ReduceTo', c => class ReduceTo extends c.Modifier {
+    get modifierType() { return 'ReduceTo'; }
+
     constructor(from, callback, target, type, ...withData) {
       const typeofTarget = c.typeof(target);
       const typeofType = c.typeof(type);
@@ -35,6 +37,10 @@ export default(b) => {
         }
       }
 
+      if (!type && target) {
+        type = target.type;
+      }
+
       withData = flattenDeep([type, withData]).filter(item => c.typeof(item) === 'Data');
 
       super(from, callback, target, ...withData);
@@ -48,7 +54,7 @@ export default(b) => {
       });
 
       if (this.target) {
-        this.target.content = memo;
+        this.target.replace(memo);
       }
       return memo;
     }

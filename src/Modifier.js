@@ -1,4 +1,4 @@
-import { includes } from 'lodash';
+import { includes, flattenDeep, compact } from 'lodash';
 
 /**
  * Callbacks are "Holistic" observers. Its central lever is a function that is called whenever
@@ -23,12 +23,13 @@ import { includes } from 'lodash';
  *
  * note - the result of reduction is an instance of the same type as the target
  * @param b
+ *
  */
+
 export default(b) => {
   b.factory('Modifier', c => class ReduceTo {
     constructor(from, callback, target, ...withData) {
-      this._withMap = new Map();
-      this._watchList = [];
+      this._withSet = new Set();
       this.target = target;
       this.from = from;
       this.callback = callback;
@@ -36,7 +37,7 @@ export default(b) => {
     }
 
     get withData() {
-      return this._withMap;
+      return Array.from(this._withSet.values());
     }
 
     get callback() {
@@ -63,30 +64,22 @@ export default(b) => {
         } else {
           throw new Error('withs must be a Data instance or an array of them.');
         }
-        withList.forEach(data => this._addWith(data));
+        compact(flattenDeep(withList)).forEach(data => this._addWith(data));
       }
     }
 
     get _withObj() {
-      if (!this.__withObj) {
-        this.__withObj = {};
-      }
-
-      return this.__withObj;
+      return Array.from(this._withSet.values()).reduce((memo, data) => {
+        memo[data.name] = data.content;
+        return memo;
+      }, {});
     }
 
     _addWith(data) {
       if (!data && data instanceof c.Data) {
         throw new Error('withs must be a Data instance.');
       }
-      if (this._withMap.has(data.name)) return;
-      this._withMap.set(data.name, data);
-
-      this._withObj[data.name] = data.content;
-
-      if (data.type === c.DATATYPE_VALUE) {
-        data.on('change', () => this._withObj[data.name] = data.content);
-      }
+      if (this._withSet.has(data)) return;
       this._watch(data);
     }
 
@@ -103,13 +96,15 @@ export default(b) => {
       if (!c.typeof(data) === 'Data') {
         throw new Error('watch targets must be a Data instance.');
       }
-      if (!includes(this._watchList, data.name)) {
-        this._watchData(data);
-        this._watchList.push(data.name);
-      }
+
+      if (this._withSet.has(data)) return;
+      this._withSet.add(data);
+
+      this._emitToData(data);
+      data.outputs.add(this);
     }
 
-    _watchData(data) {
+    _emitToData(data) {
       if (!(c.typeof(data) === 'Data')) {
         console.log('bad watch: ', data);
         throw new Error('watch targets must be a Data instance.');

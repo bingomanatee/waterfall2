@@ -25,6 +25,8 @@ import { includes } from 'lodash';
  */
 export default(b) => {
   b.factory('FilterTo', c => class FilterTo extends c.Modifier {
+    get modifierType() { return 'FilterTo'; }
+
     /**
      * triggered whenever the "from" data or any of the "withs" changes.
      * it passes:

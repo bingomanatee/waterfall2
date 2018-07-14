@@ -6,8 +6,8 @@ import userListFactory from './userList/userList';
 import bottle from '../src/bottle';
 import eventsFn from './events';
 
-const sortedUsers = _.sortBy(users, 'lastName', 'firstName', 'id');
-
+const sortedUsers = _.sortBy(users, 'lastName', 'firstName', 'email', 'id');
+// require('fs').writeFileSync('tenThousandUsersSorted.json', JSON.stringify(sortedUsers));
 
 describe('types', () => {
   let c;
@@ -33,15 +33,14 @@ describe('types', () => {
     it('should reflect updates to list', () => {
       const copy = users.slice(0);
       const firstSortedID = sortedUsers[0].id;
-      const first = _.cloneDeep(copy[firstSortedID]);
+      const first = _.cloneDeep(sortedUsers[0]);
       first.lastName = 'Zachary';
-      copy[firstSortedID] = first;
-      const resortedUserIDs = _(copy).sortBy('lastName', 'firstName', 'id')
-        .map('id').value();
-      userList.users.replace(users);
-      //  console.log('users: ', userList.users.content.slice(0, 4));
-      const filter = userList.usersToSortedIDs;
-      userList.users.set(firstSortedID, first);
+      copy[first.id] = first;
+      const resortedUserIDs = _(copy)
+        .sortBy('lastName', 'firstName', 'email', 'id')
+        .map('id')
+        .value();
+      userList.users.set(first.id, first);
       expect(userList.sortedUserIDs.slice(0))
         .toEqual(resortedUserIDs);
     });
@@ -95,39 +94,63 @@ describe('types', () => {
       const terms = userList.usersToSearchTerms;
       const filter = userList.searchToFoundIndexes;
       const chunking = userList.foundIndexesToChunks;
+      const sortChunks = userList.sortFoundIndexes;
       const sortChunking = userList.sortedFoundIndexes;
     });
 
+    it.skip('should report: ', () => {
+      console.log('==== CHUNKING REPORT ====');
+      console.log(userList.report(10));
+      expect(1).toEqual(1);
+    });
+
     it('should start chunking', () => {
-      expect(userList.chunkedIDs.get(0)).toEqual(_.range(0, 10));
+      expect(userList.chunkedIDs.get(0))
+        .toEqual([4137, 7972, 4947, 5834, 3173, 7640, 6698, 4319, 8427, 1406]);
     });
 
     it('should resize when the pageSize changes', () => {
       userList.pageSize.replace(5);
-      expect(userList.chunkedIDs.get(0)).toEqual(_.range(0, 5));
+      // console.log(' ------------------ should resize when changed: -------------------');
+      // console.log(userList.report(4, 100));
+      expect(userList.chunkedIDs.get(0))
+        .toEqual([4137, 7972, 4947, 5834, 3173]);
     });
 
-    it('should find a smaller set when set', () => {
-      events = eventsFn(userList.foundIndexes);
+    it('should find a smaller set when set', async () => {
       userList.searchPhrase.replace('phi');
+
       expect(userList.chunkedIDs.get(0))
-        .toEqual([2212, 3675, 5641, 6075, 7641, 9039, 9288, 9323, 9423, 9783]);
+        .toEqual([9423, 3675, 9039, 9992, 9288, 9323, 2212, 6075, 7641, 5641]);
     });
   });
 
   describe('final unification', () => {
     beforeEach(() => {
       userList.users.replace(users);
-      const sorted = userList.usersToByID;
+      const index = userList.usersToByID;
+      const sort = userList.usersToSortedIDs;
       const terms = userList.usersToSearchTerms;
       const filter = userList.searchToFoundIndexes;
       const chunking = userList.foundIndexesToChunks;
+      const sortChunks = userList.sortFoundIndexes;
+      const sortChunking = userList.sortedFoundIndexes;
       const final = userList.chunksToUsers;
     });
 
-    it('should put users in finalUsers', () => {
+    it.skip('should report', () => {
+      console.log('==== FINALUSERS REPORT ====');
+      console.log(userList.report(10));
+    });
+
+    it('should put users in finalUsers (ids) ', () => {
+      const finalUsersMail = userList.finalUsers.map(user => user.id);
+      expect(finalUsersMail).toEqual(sortedUsers.slice(0, 10).map(user => user.id));
+    });
+
+    it('should put users in finalUsers (emails)', () => {
       const finalUsersMail = userList.finalUsers.map(user => user.email);
-      expect(finalUsersMail).toEqual(users.slice(0, 10).map(user => user.email));
+      expect(finalUsersMail).toEqual(sortedUsers.slice(0, 10).map(user => user.email));
     });
   });
 });

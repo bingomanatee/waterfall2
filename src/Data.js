@@ -1,4 +1,6 @@
-import { difference, cloneDeep, includes, first, last } from 'lodash';
+/* eslint-disable no-restricted-syntax */
+import { difference, cloneDeep, includes, first, last, zip } from 'lodash';
+import textTable from 'text-table';
 import EventEmitter from 'eventemitter3';
 
 const KNOWN_TYPES = 'add,remove,delete,replace,change,update'.split(',');
@@ -16,8 +18,22 @@ export default (bottle) => {
         this.name = name || `data_${++Data._nextID}`;
       }
 
+      map(fn) {
+        return this.keys.map(key => fn(this.get(key), key));
+      }
+
       mapTo(...args) {
         return new c.MapTo(this, ...args);
+      }
+
+      get inputs() {
+        if (!this._inputs) { this._inputs = new Set(); }
+        return this._inputs;
+      }
+
+      get outputs() {
+        if (!this._outputs) { this._outputs = new Set(); }
+        return this._outputs;
       }
 
       key(...args) {
@@ -37,7 +53,7 @@ export default (bottle) => {
       }
 
       set content(value) {
-        this._content = value;
+        this._content = this.cloneData(value);
         this.onChange({ type: 'replace', content: value });
       }
 
@@ -96,6 +112,11 @@ export default (bottle) => {
         throw new Error('must override');
       }
 
+      get typeName() {
+        const str = this.type.toString();
+        return (/\(([^[\)\(]*)\)/.exec(str)[1]);
+      }
+
       onChange(change) {
         this._sendChange(change);
       }
@@ -120,232 +141,100 @@ export default (bottle) => {
           this.emit('change-other', { data: this.name, change });
         }
       }
+
+      _mainTable({
+        isHorizontal = true, maxItems = null, cellRenderer = null, alignValue = 'l',
+      }) {
+        const data = [];
+        let keys = this.keys;
+        if (maxItems) keys = keys.slice(0, maxItems);
+        let values = this.values;
+        if (!values) {
+          console.log('cant get values for ', this.name);
+          values = [];
+        }
+        if (cellRenderer) values = this.map(cellRenderer);
+        if (maxItems) values = values.slice(0, maxItems);
+        let align = ['l'];
+        if (isHorizontal) {
+          data.push(['key', ...keys]);
+          data.push(['value', ...values]);
+          if (typeof alignValue === 'function') {
+            align = this.map(alignValue);
+            data.push(['l', ...align]);
+          } else {
+            values.forEach(() => align.push(alignValue));
+          }
+        } else {
+          data.push(['key', 'value']);
+          const rows = zip(keys, values);
+          data.push(...rows);
+          if (Array.isArray(alignValue)) {
+            align = align.concat(alignValue);
+          } else align.push(alignValue, alignValue);
+        }
+
+        return textTable(data, { align, hsep: '|' });
+      }
+
+      _outTable() {
+        const outData = [['method', 'target', 'from', 'with']];
+        const otherWiths = (item) => {
+          const names = item.withData.map(data => (data ? data.name : ''));
+          const main = [item.from.name];
+          return difference(names, main).join(', ');
+        };
+        for (const item of this.outputs) {
+          outData.push([
+            item.modifierType,
+            item.target ? item.target.name : '(none)',
+            item.from.name,
+            otherWiths(item),
+          ]);
+        }
+
+        return textTable(outData, { align: ['l', 'l'] });
+      }
+
+      toTable(config = {}) {
+        let mainTable = '--- error ---';
+
+        try {
+          mainTable = this._mainTable(config);
+        } catch (err) {
+          mainTable = `Error on mainTable: ${err.message}`;
+          console.log('mainTable Error:', err);
+        }
+
+        let outTable = '(no outputs)';
+        if (this.outputs.size > 0) {
+          try {
+            outTable = this._outTable(config);
+          } catch (err) {
+            outTable = `Error on outTable: ${err.message}`;
+            console.log('outTable Error:', err);
+          }
+        }
+
+        let count = `(${this.size})`;
+        if (config.maxItems < this.size) {
+          count = `(${config.maxItems} of ${this.size})`;
+        }
+
+        return `
+____________________________________________
+DATA: ${this.name}:${this.typeName} ${count}
+${mainTable}
+
+outputs:
+        
+${outTable}
+-------------------------------------------`;
+      }
     }
     Data._nextID = 0;
 
     return Data;
-  });
-
-  bottle.factory('DataMap', c => class DataMap extends c.Data {
-    get type() {
-      return c.DATATYPE_MAP;
-    }
-
-    raw() {
-      const myEntries = this.entries.map(([key, value]) => [key, cloneDeep(value)]);
-      return new Map(myEntries);
-    }
-
-    get(name) {
-      return this.content.get(name);
-    }
-
-    get keys() {
-      return Array.from(this.content.keys());
-    }
-
-    get values() {
-      return Array.from(this.content.values());
-    }
-
-    set(name, value) {
-      if (typeof name === 'undefined') throw new Error('cannot set undefined', name);
-      if (this.has(name)) {
-        const oldValue = this.get(name);
-        this.content.set(name, value);
-        this.onChange({
-          type: 'update',
-          name,
-          oldValue,
-          newValue: value,
-        });
-      } else {
-        this.content.set(name, value);
-        this.onChange({
-          type: 'add',
-          name,
-          newValue: value,
-        });
-      }
-    }
-
-    has(index) {
-      return this.content.has(index);
-    }
-
-    remove(key) {
-      if (!this.has(key)) return;
-      const oldValue = this.get(key);
-      this.content.delete(key);
-      this.onChange({ type: 'remove', name: key, oldValue });
-    }
-  });
-
-  bottle.factory('DataObject', c => class DataObject extends c.Data {
-    get type() {
-      return c.DATATYPE_OBJECT;
-    }
-
-    replace(value) {
-      const valueKeys = Object.keys(value);
-      const deletedKeys = difference(this.keys, valueKeys);
-      deletedKeys.forEach(key => this.remove(key));
-      valueKeys.forEach(key => this.set(key, value[key]));
-    }
-
-    raw() {
-      return this.entries.reduce((out, pair) => {
-        out[pair[0]] = (pair && (typeof pair[1] === 'object')) ? cloneDeep(pair[1]) : pair[1];
-        return out;
-      }, {});
-    }
-    get keys() {
-      return Object.keys(this.content);
-    }
-
-    get values() {
-      return Object.values(this.content);
-    }
-
-    get entries() {
-      return Object.entries(this.content);
-    }
-
-    remove(key) {
-      if (!this.has(key)) return;
-      const oldValue = this.content[key];
-      delete this.content[key];
-      this.onChange({ type: 'remove', name: key, oldValue });
-    }
-
-    has(index) {
-      // eslint-disable-next-line no-prototype-builtins
-      return this.content.hasOwnProperty(index);
-    }
-  });
-
-  bottle.factory('DataArray', c => class DataMap extends c.Data {
-    get type() {
-      return c.DATATYPE_ARRAY;
-    }
-
-    splice(index, removedCount, ...added) {
-      const addedCount = added.length;
-
-      const removed = this.content.splice(index, removedCount, ...added);
-      this.onChange({
-        type: 'splice', index, added, removed, addedCount, removedCount,
-      });
-      return removed;
-    }
-    slice(...args) { return this.content.slice(...args); }
-    push(...added) {
-      this.splice(this.content.length, 0, ...added);
-    }
-    pop() {
-      if (!this.length) return null;
-      const result = last(this.content);
-      this.splice(this.length - 1, 1);
-      return result;
-    }
-    unshift(...added) {
-      return this.splice(0, 0, ...added);
-    }
-    get length() {
-      return this.content.length;
-    }
-    shift() {
-      if (!this.length) return null;
-      const out = first(this.content);
-      this.splice(0, 1);
-      return out;
-    }
-
-    remove(key) {
-      return this.splice(key, 1);
-    }
-
-    onChange(change) {
-      switch (change.type) {
-        case 'splice':
-          this.emit('change', { data: this.name, change });
-          this.onSplice(change);
-          break;
-
-        default:
-          super.onChange(change);
-      }
-    }
-
-    raw() {
-      return this.content.map(cloneDeep);
-    }
-
-    map(fn) {
-      return this.content.map(fn);
-    }
-
-    set(index, value) {
-      for (let i = this.length; i < index; ++i) {
-        super.set(i);
-      }
-      super.set(index, value);
-    }
-
-    onSplice(change) {
-      this.emit('splice', { data: this.name, change });
-    }
-    get keys() {
-      return this.content.keys;
-    }
-
-    get values() {
-      return this.content.slice(0);
-    }
-
-    has(index) {
-      return index === Math.round(index) && index >= 0 && index < this.content.length;
-    }
-  });
-
-  bottle.factory('DataValue', c => class DataMap extends c.Data {
-    set(index, value) {
-      throw new Error('cannot set a DataValue');
-    }
-    get type() {
-      return c.DATATYPE_VALUE;
-    }
-
-    set content(newValue) {
-      const oldValue = this._content || null;
-      this._content = newValue;
-      this.onChange({
-        type: 'replace',
-        oldValue,
-        newValue,
-      });
-    }
-
-    get content() {
-      return this._content;
-    }
-
-    replace(value) {
-      this.content = value;
-    }
-
-    raw() {
-      if (this.content && typeof this.content === 'object') return cloneDeep(this.content);
-      return this.content;
-    }
-  });
-
-  bottle.factory('dataType', c => (item) => {
-    if (item === null) return c.DATATYPE_VALUE;
-    if (Array.isArray(item)) return c.DATATYPE_ARRAY;
-    if (item instanceof Map) return c.DATATYPE_MAP;
-    if (typeof item === 'object') return c.DATATYPE_OBJECT;
-    return c.DATATYPE_VALUE;
   });
 
   bottle.factory('toData', c => (content, name = null) => {
