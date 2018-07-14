@@ -39,7 +39,7 @@ export default(b) => {
       const result = this.callback(this.from.content, change, this._withObj);
       if (this.target) {
         if (this.target instanceof c.Data) {
-          this.target.content = result;
+          this.target.replace(result);
         } else if (typeof this.target === 'function') {
           this.target(result, change, this);
         } else {

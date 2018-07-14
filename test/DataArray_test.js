@@ -36,7 +36,6 @@ describe('Data', () => {
           expect(events.adds.length).toEqual(0);
           expect(events.removes.length).toEqual(0);
           expect(events.splices.length).toEqual(0);
-          console.log('events: ', events);
           expect(events.other.length).toEqual(0);
         });
 

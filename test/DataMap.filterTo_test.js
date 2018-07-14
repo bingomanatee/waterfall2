@@ -68,7 +68,7 @@ describe('Data', () => {
 
         dataMap.filterTo((theMap, change) => {
           if (change.data === 'theMap') {
-            if (Reflect.has(change.change, 'name')) {
+            if (change.change.name) {
               keysChanged.push(change.change.name);
             }
           }

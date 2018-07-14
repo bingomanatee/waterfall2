@@ -155,13 +155,16 @@ export default (bottle) => {
         this.content.set(name, value);
         this.onChange({
           type: 'update',
-          change: { name, oldValue, newValue: value },
+          name,
+          oldValue,
+          newValue: value,
         });
       } else {
         this.content.set(name, value);
         this.onChange({
           type: 'add',
-          change: { name, newValue: value },
+          name,
+          newValue: value,
         });
       }
     }
@@ -173,7 +176,7 @@ export default (bottle) => {
     remove(key) {
       if (!this.has(key)) return;
       const oldValue = this.get(key);
-      this.content.remove(key);
+      this.content.delete(key);
       this.onChange({ type: 'remove', name: key, oldValue });
     }
   });
@@ -227,14 +230,13 @@ export default (bottle) => {
     }
 
     splice(index, removedCount, ...added) {
-      const removed = this.slice(index, removedCount);
       const addedCount = added.length;
 
-      const result = this.content.splice(index, removedCount, ...added);
+      const removed = this.content.splice(index, removedCount, ...added);
       this.onChange({
         type: 'splice', index, added, removed, addedCount, removedCount,
       });
-      return result;
+      return removed;
     }
     slice(...args) { return this.content.slice(...args); }
     push(...added) {
@@ -260,7 +262,7 @@ export default (bottle) => {
     }
 
     remove(key) {
-      this.splice(key, 1);
+      return this.splice(key, 1);
     }
 
     onChange(change) {

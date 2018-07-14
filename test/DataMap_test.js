@@ -127,40 +127,16 @@ describe('Data', () => {
 
       describe('replace', () => {
         beforeEach(() => {
-          // note: one unchanged value,
-          // one changed value,
-          // one new value,
-          // one removed value
           dataMap.content = new Map([['a', 1], ['c', 4], ['e', 10]]);
         });
 
         it('should send the right events', () => {
-          expect(events.changes.length).toEqual(3);
-          expect(events.updates.length).toEqual(1);
-          expect(events.adds.length).toEqual(1);
-          expect(events.removes.length).toEqual(1);
+          expect(events.changes.length).toEqual(1);
+          expect(events.updates.length).toEqual(0);
+          expect(events.adds.length).toEqual(0);
+          expect(events.replaces.length).toEqual(1);
+          expect(events.removes.length).toEqual(0);
           expect(events.other.length).toEqual(0);
-        });
-
-        it('should have the expected delete', () => {
-          const msg = events.removes[0];
-          const { name } = msg.change;
-          expect(name).toEqual('b');
-        });
-
-        it('should have the expected update', () => {
-          const msg = events.updates[0];
-          const { oldValue, name, newValue } = msg.change;
-          expect(name).toEqual('c');
-          expect(oldValue).toEqual(3);
-          expect(newValue).toEqual(4);
-        });
-
-        it('should have the expected add', () => {
-          const msg = events.adds[0];
-          const { name, newValue } = msg.change;
-          expect(name).toEqual('e');
-          expect(newValue).toEqual(10);
         });
 
         it('should produce the expected map', () => {
