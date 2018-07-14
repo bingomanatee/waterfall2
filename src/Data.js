@@ -141,11 +141,11 @@ export default (bottle) => {
     }
 
     get keys() {
-      return this.content.keys();
+      return Array.from(this.content.keys());
     }
 
     get values() {
-      return this.content.values();
+      return Array.from(this.content.values());
     }
 
     set(name, value) {
@@ -315,19 +315,10 @@ export default (bottle) => {
     set content(newValue) {
       const oldValue = this._content || null;
       this._content = newValue;
-      this.emit('change', {
-        data: this.name,
-        change: {
-          oldValue,
-          newValue,
-        },
-      });
-      this.emit('update', {
-        data: this.name,
-        change: {
-          oldValue,
-          newValue,
-        },
+      this.onChange({
+        type: 'replace',
+        oldValue,
+        newValue,
       });
     }
 
