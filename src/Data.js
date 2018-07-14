@@ -281,6 +281,10 @@ export default (bottle) => {
       return this.content.map(cloneDeep);
     }
 
+    map(fn) {
+      return this.content.map(fn);
+    }
+
     set(index, value) {
       for (let i = this.length; i < index; ++i) {
         super.set(i);

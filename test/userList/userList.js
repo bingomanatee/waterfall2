@@ -43,16 +43,48 @@ export default() => {
       .init();
   });
 
+  b.constant('sortedFoundIndexes', c.toData([], 'sortedFoundIndexes'));
+  b.factory(
+    'sortFoundIndexes',
+    con => con.sortedUserIDs
+      .filterTo((sIDs, change, { foundIndexes }) => {
+        console.log('sIDs: ', sIDs.slice(0, 10));
+        console.log('foundIndexes: ', foundIndexes.slice(0, 10));
+        const union = _.intersect(sIDs, foundIndexes);
+        console.log('union', union.slice(0, 10));
+        return union;
+      })
+      .into(con.sortedFoundIndexes)
+      .with(con.foundIndexes)
+      .init(),
+  );
+
   b.constant('page', c.toData(0, 'page'));
   b.constant('pageSize', c.toData(10, 'pageSize'));
   b.constant('chunkedIDs', c.toData([], 'chunkedIDs'));
   b.factory(
     'foundIndexesToChunks',
-    con => con.foundIndexes.filterTo((ids, ch, { pageSize }) => _.chunk(ids, pageSize))
+    con => con.sortedFoundIndexes
+      .filterTo((ids, ch, { pageSize }) => {
+        const out = _.chunk(ids, pageSize);
+        console.log('out: ', out.slice(0, 10));
+        return out;
+      })
       .with(con.pageSize)
       .into(con.chunkedIDs)
       .init(),
   );
+
+  b.constant('finalUsers', c.toData([], 'finalUsers'));
+  b.factory('chunksToUsers', con => con.chunkedIDs
+    .filterTo((chunks, change, { page, usersByID }) => {
+      const chunk = chunks[page];
+      if (!chunk) return [];
+      return chunk.map(id => usersByID.get(id));
+    }).with(con.usersByID)
+    .with(con.page)
+    .into(con.finalUsers)
+    .init());
 
   return b.container;
 };

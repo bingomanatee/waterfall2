@@ -64,7 +64,8 @@ describe('types', () => {
     let events;
     beforeEach(() => {
       userList.users.replace(users);
-      const sorted = userList.usersToByID;
+      const index = userList.usersToByID;
+      const sort = userList.usersToSortedIDs;
       const terms = userList.usersToSearchTerms;
       const filter = userList.searchToFoundIndexes;
     });
@@ -89,10 +90,12 @@ describe('types', () => {
     let events;
     beforeEach(() => {
       userList.users.replace(users);
-      const sorted = userList.usersToByID;
+      const index = userList.usersToByID;
+      const sort = userList.usersToSortedIDs;
       const terms = userList.usersToSearchTerms;
       const filter = userList.searchToFoundIndexes;
       const chunking = userList.foundIndexesToChunks;
+      const sortChunking = userList.sortedFoundIndexes;
     });
 
     it('should start chunking', () => {
@@ -109,6 +112,22 @@ describe('types', () => {
       userList.searchPhrase.replace('phi');
       expect(userList.chunkedIDs.get(0))
         .toEqual([2212, 3675, 5641, 6075, 7641, 9039, 9288, 9323, 9423, 9783]);
+    });
+  });
+
+  describe('final unification', () => {
+    beforeEach(() => {
+      userList.users.replace(users);
+      const sorted = userList.usersToByID;
+      const terms = userList.usersToSearchTerms;
+      const filter = userList.searchToFoundIndexes;
+      const chunking = userList.foundIndexesToChunks;
+      const final = userList.chunksToUsers;
+    });
+
+    it('should put users in finalUsers', () => {
+      const finalUsersMail = userList.finalUsers.map(user => user.email);
+      expect(finalUsersMail).toEqual(users.slice(0, 10).map(user => user.email));
     });
   });
 });
