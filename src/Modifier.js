@@ -134,6 +134,12 @@ export default(b) => {
       return this.onChange(null);
     }
 
+    into(target, init = false) {
+      this.target = target;
+      if (init) this.init();
+      return this;
+    }
+
     toNew(type, name, initialize = false) {
       this.target = c.toData(c.blankOf(type), name);
       if (initialize) this.init();

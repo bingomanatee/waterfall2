@@ -9,16 +9,13 @@ export default() => {
   b.constant('users', c.toData([], 'users'));
 
   b.constant('usersByID', c.toData(new Map(), 'usersByID'));
-  b.factory('usersToByID', container => container.users.key(user => user.id, container.usersByID).init());
+  b.factory('usersToByID', con => con.users.key(user => user.id, con.usersByID).init());
 
   b.constant('sortedUserIDs', c.toData([], 'sortedUserIDs'));
   b.factory(
     'usersToSortedIDs',
     container => container.users.filterTo(
-      (userList) => {
-        const out = _(userList).sortBy('lastName', 'firstName', 'id').map('id').value();
-        return out;
-      },
+      userList => _(userList).sortBy('lastName', 'firstName', 'id').map('id').value(),
       container.sortedUserIDs,
     ).init(),
   );
@@ -45,6 +42,17 @@ export default() => {
       .with(container.searchPhrase)
       .init();
   });
+
+  b.constant('page', c.toData(0, 'page'));
+  b.constant('pageSize', c.toData(10, 'pageSize'));
+  b.constant('chunkedIDs', c.toData([], 'chunkedIDs'));
+  b.factory(
+    'foundIndexesToChunks',
+    con => con.foundIndexes.filterTo((ids, ch, { pageSize }) => _.chunk(ids, pageSize))
+      .with(con.pageSize)
+      .into(con.chunkedIDs)
+      .init(),
+  );
 
   return b.container;
 };

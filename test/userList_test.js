@@ -84,4 +84,31 @@ describe('types', () => {
       });
     });
   });
+
+  describe('chunking', () => {
+    let events;
+    beforeEach(() => {
+      userList.users.replace(users);
+      const sorted = userList.usersToByID;
+      const terms = userList.usersToSearchTerms;
+      const filter = userList.searchToFoundIndexes;
+      const chunking = userList.foundIndexesToChunks;
+    });
+
+    it('should start chunking', () => {
+      expect(userList.chunkedIDs.get(0)).toEqual(_.range(0, 10));
+    });
+
+    it('should resize when the pageSize changes', () => {
+      userList.pageSize.replace(5);
+      expect(userList.chunkedIDs.get(0)).toEqual(_.range(0, 5));
+    });
+
+    it('should find a smaller set when set', () => {
+      events = eventsFn(userList.foundIndexes);
+      userList.searchPhrase.replace('phi');
+      expect(userList.chunkedIDs.get(0))
+        .toEqual([2212, 3675, 5641, 6075, 7641, 9039, 9288, 9323, 9423, 9783]);
+    });
+  });
 });
