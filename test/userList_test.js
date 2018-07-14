@@ -24,6 +24,7 @@ describe('types', () => {
       userList.users.replace(users);
       const filter = userList.usersToSortedIDs;
     });
+
     it('should produce sorted ids', () => {
       expect(userList.sortedUserIDs.raw())
         .toEqual(_.map(sortedUsers, 'id'));
@@ -49,7 +50,7 @@ describe('types', () => {
   describe('search indexing', () => {
     beforeEach(() => {
       userList.users.replace(users);
-      const sorted = userList.usersToById;
+      const sorted = userList.usersToByID;
       const filter = userList.usersToSearchTerms;
     });
 
@@ -63,7 +64,7 @@ describe('types', () => {
     let events;
     beforeEach(() => {
       userList.users.replace(users);
-      const sorted = userList.usersToById;
+      const sorted = userList.usersToByID;
       const terms = userList.usersToSearchTerms;
       const filter = userList.searchToFoundIndexes;
     });
@@ -74,9 +75,13 @@ describe('types', () => {
 
     it('should find a smaller set when set', () => {
       events = eventsFn(userList.foundIndexes);
-      userList.searchPhrase.replace('ph');
-      console.log('events: ', events);
-      console.log('found indexes: ', userList.foundIndexes.raw());
+      userList.searchPhrase.replace('phi');
+      expect(userList.foundIndexes.content)
+        .toEqual([2212, 3675, 5641, 6075, 7641, 9039, 9288, 9323, 9423, 9783, 9992]);
+      userList.foundIndexes.content.forEach((index) => {
+        const term = userList.searchTerms.get(index);
+        expect(term.indexOf('phi')).toBeGreaterThan(-1);
+      });
     });
   });
 });

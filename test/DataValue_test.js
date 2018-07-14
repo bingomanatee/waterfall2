@@ -27,25 +27,26 @@ describe('Data', () => {
 
     describe('events', () => {
       describe('replace', () => {
+        let msg;
         beforeEach(() => {
           dataValue.content = 30;
+          msg = events.replaces[0];
         });
 
         it('should send the right events', () => {
           expect(events.changes.length).toEqual(1);
-          expect(events.updates.length).toEqual(1);
+          expect(events.updates.length).toEqual(0);
+          expect(events.replaces.length).toEqual(1);
           expect(events.adds.length).toEqual(0);
           expect(events.removes.length).toEqual(0);
           expect(events.other.length).toEqual(0);
         });
 
         it('should have the data name', () => {
-          const msg = events.updates[0];
           expect(msg.data).toEqual('count');
         });
 
         it('should have the expected change', () => {
-          const msg = events.updates[0];
           const { name, newValue } = msg.change;
           expect(newValue).toEqual(30);
         });

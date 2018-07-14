@@ -67,18 +67,27 @@ export default(b) => {
       }
     }
 
+    get _withObj() {
+      if (!this.__withObj) {
+        this.__withObj = {};
+      }
+
+      return this.__withObj;
+    }
+
     _addWith(data) {
       if (!data && data instanceof c.Data) {
         throw new Error('withs must be a Data instance.');
       }
       if (this._withMap.has(data.name)) return;
       this._withMap.set(data.name, data);
-      this._watch(data);
 
-      if (!this._withObj) {
-        this._withObj = {};
-      }
       this._withObj[data.name] = data.content;
+
+      if (data.type === c.DATATYPE_VALUE) {
+        data.on('change', () => this._withObj[data.name] = data.content);
+      }
+      this._watch(data);
     }
 
     /**
