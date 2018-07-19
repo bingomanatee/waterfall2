@@ -6,6 +6,7 @@ import EventEmitter from 'eventemitter3';
 const KNOWN_TYPES = 'add,remove,delete,replace,change,update'.split(',');
 
 export default (bottle) => {
+
   /**
    * the base class for Data variations
    */
@@ -16,6 +17,34 @@ export default (bottle) => {
         super();
         this.content = content;
         this.name = name || `data_${++Data._nextID}`;
+        this._currentTransaction = null;
+      }
+
+      transStart() {
+        if (this._currentTransaction) {
+          this._currentTransaction.close();
+        }
+        this._currentTransaction = new c.Transaction(this);
+      }
+
+      get _activeTrans() {
+        if (this._currentTransaction && this._currentTransaction.state === 'open') { return this._currentTransaction; }
+        return false;
+      }
+
+      get hasTrans() {
+        return !!this._activeTrans;
+      }
+
+      transEnd() {
+        if (this._currentTransaction) {
+          this._currentTransaction.close();
+          this._currentTransaction = null;
+        }
+      }
+
+      transRevert() {
+        this._currentTransaction = null;
       }
 
       map(fn) {
@@ -52,9 +81,29 @@ export default (bottle) => {
         return Array.from(this.content.entries());
       }
 
+      cloneData(value) {
+        return cloneDeep(value);
+      }
+
       set content(value) {
-        this._content = this.cloneData(value);
-        this.onChange({ type: 'replace', content: value });
+        if (this._content) {
+          const vType = c.typeof(value);
+          if (!vType !== this.type) throw new Error(`cannot replace  ${this.type} with type ${vType}`);
+        }
+        value = this.cloneData(value);
+
+        if (this._activeTrans) {
+          this._activeTrans.newData = value;
+          this._activeTrans.replace = true;
+          return;
+        }
+
+        this._content = value;
+        this.sendReplace();
+      }
+
+      sendReplace() {
+        this.onChange({ type: 'replace', content: this.content });
       }
 
       raw() {
@@ -96,12 +145,16 @@ export default (bottle) => {
       set(name, value) {
         if (this.has(name)) {
           const oldValue = this.get(name);
-          this.content[name] = value;
+          if (this._activeTrans) {
+            this._activeTrans.newContent[name] = value;
+          } else { this.content[name] = value; }
           this.onChange({
             type: 'update', name, index: name, oldValue, newValue: value,
           });
         } else {
-          this.content[name] = value;
+          if (this._activeTrans) {
+            this._activeTrans.newContent[name] = value;
+          } else { this.content[name] = value; }
           this.onChange({
             type: 'add', name, index: name, newValue: value,
           });
@@ -122,6 +175,13 @@ export default (bottle) => {
       }
 
       _sendChange(change) {
+        if (this._activeTrans) {
+          this._activeTrans.addChange(change);
+          return;
+        }
+
+        change = cloneDeep(change);
+
         this.emit('change', { data: this.name, change });
 
         this.emit(change.type, { data: this.name, change });

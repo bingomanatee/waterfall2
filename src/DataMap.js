@@ -12,6 +12,9 @@ export default (bottle) => {
     }
 
     get(name) {
+      if (this._activeTrans) {
+        return this._activeTrans.newContent.get(name);
+      }
       return this.content.get(name);
     }
 
@@ -35,7 +38,9 @@ export default (bottle) => {
       if (typeof name === 'undefined') throw new Error('cannot set undefined', name);
       if (this.has(name)) {
         const oldValue = this.get(name);
-        this.content.set(name, value);
+        if (this._activeTrans) {
+          this._activeTrans.newContent.set(name, value);
+        } else { this.content.set(name, value); }
         this.onChange({
           type: 'update',
           name,
@@ -43,7 +48,9 @@ export default (bottle) => {
           newValue: value,
         });
       } else {
-        this.content.set(name, value);
+        if (this._activeTrans) {
+          this._activeTrans.newContent.set(name, value);
+        } else { this.content.set(name, value); }
         this.onChange({
           type: 'add',
           name,

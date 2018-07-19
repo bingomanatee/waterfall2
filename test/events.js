@@ -1,5 +1,5 @@
 
-const EVENTS = 'add,delete,remove,update,change,replace,splice'.split(',');
+const EVENTS = 'add,delete,remove,update,change,replace,splice,batch'.split(',');
 export default (data) => {
   const events = {
     other: [],

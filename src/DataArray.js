@@ -63,10 +63,6 @@ module.exports = (bottle) => {
       }
     }
 
-    raw() {
-      return this.content.map(cloneDeep);
-    }
-
     map(fn) {
       return this.content.map(fn);
     }

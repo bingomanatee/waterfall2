@@ -4,7 +4,7 @@ import dataValue from './DataValue';
 import dataArray from './DataArray';
 import dataMap from './DataMap';
 import dataObject from './DataObject';
-
+import transaction from './Transaction';
 import map from './MapTo';
 import filterTo from './FilterTo';
 import modifier from './Modifier';
@@ -20,6 +20,7 @@ export default () => {
   dataMap(b);
   dataObject(b);
   map(b);
+  transaction(b);
   modifier(b);
   filterTo(b);
   reduceTo(b);
