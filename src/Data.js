@@ -87,8 +87,8 @@ export default (bottle) => {
 
       set content(value) {
         if (this._content) {
-          const vType = c.typeof(value);
-          if (!vType !== this.type) throw new Error(`cannot replace  ${this.type} with type ${vType}`);
+          const vType = c.dataType(value);
+          if (vType !== this.type) throw new Error(`cannot replace  ${this.type.toString()} with type ${vType.toString()}`);
         }
         value = this.cloneData(value);
 
