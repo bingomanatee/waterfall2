@@ -53,13 +53,12 @@ export default(b) => {
       const callback = this.callback;
 
       Array.from(this.from.entries).forEach(([key, value]) => {
-        memo = callback(memo, value, key, change, this._withObj);
+        memo = callback(memo, value, key, this._withObj, change);
       });
 
       if (this.target) {
         this.target.replace(memo);
       }
-      return memo;
     }
   });
 };

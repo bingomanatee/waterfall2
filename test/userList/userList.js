@@ -35,7 +35,7 @@ export default() => {
 
   b.factory('searchToFoundIndexes', (container) => {
     container.searchTerms.reduceTo(
-      (memo, term, id, change, { searchPhrase }) => {
+      (memo, term, id, { searchPhrase }) => {
         if (!searchPhrase) memo.push(id);
         else if (term.indexOf(searchPhrase) > -1) {
           memo.push(id);
@@ -52,7 +52,7 @@ export default() => {
   b.factory(
     'sortFoundIndexes',
     con => con.sortedUserIDs
-      .filterTo((sIDs, change, { foundIndexes }) => _.intersection(sIDs, foundIndexes))
+      .filterTo((sIDs, { foundIndexes }) => _.intersection(sIDs, foundIndexes))
       .into(con.sortedFoundIndexes)
       .with(con.foundIndexes)
       .init(),
@@ -64,7 +64,7 @@ export default() => {
   b.factory(
     'foundIndexesToChunks',
     con => con.sortedFoundIndexes
-      .filterTo((ids, ch, { pageSize }) => _.chunk(ids, pageSize))
+      .filterTo((ids, { pageSize }) => _.chunk(ids, pageSize))
       .with(con.pageSize)
       .into(con.chunkedIDs)
       .init(),
@@ -72,7 +72,7 @@ export default() => {
 
   b.constant('finalUsers', c.toData([], 'finalUsers'));
   b.factory('chunksToUsers', con => con.chunkedIDs
-    .filterTo((chunks, change, { page, usersByID }) => {
+    .filterTo((chunks, { page, usersByID }) => {
       const chunk = chunks[page];
       if (!chunk) return [];
       return chunk.map(id => usersByID.get(id));

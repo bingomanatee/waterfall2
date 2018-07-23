@@ -39,7 +39,7 @@ export default(b) => {
      */
     onChange(change) {
       if (!this._inited) return;
-      const result = this.callback(this.from.content, change, this._withObj);
+      const result = this.callback(this.from.content, this._withObj, change);
       if (this.target) {
         if (this.target instanceof c.Data) {
           this.target.replace(result);

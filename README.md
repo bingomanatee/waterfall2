@@ -125,10 +125,10 @@ When the "from" Data changes, the modifier will update the target.
 
 Modifiers take one or more arguments:
 
-* **a transforming function** that transforms the "from" collection 
+* **a transforming function** (required) that transforms the "from" collection 
   (or elements of the "from" collection) into the target
 * **a target** -- the collection that the results are put into
-* (optional) an array of any related collections that are watched for changes
+* **withData** -- an array of any related collections that are watched for changes
   and assist in the computation of the transformation
 
 there are also currying methods like
@@ -138,13 +138,58 @@ there are also currying methods like
 
 ### the `.init()` trigger
 
-The modifier doesn't activate until you call `.init()` on it. 
+Modifiers don't activate until you call `.init()` on them. 
+This is to allow time for currying methods to add any needed input
+to the modifier. 
 
-### toMap
+### mapTo
 
 ToMap takes a function that copies the modified value fromm the original 
 and maps it to the same key of the target. 
 
+The toMap function operates on individual key/value pairs; if you change single
+values in the from Data, only single values in the target are updated.
+
+The transforming function has the signature 
+
+```` javascript
+
+(value, key, {withs}) => newValue
+
+````
+
+### reduceTo
+
+ReduceTo modifiers recalculate an output value over the from collection
+whenever anything changes. It operates like the array's reduce method
+but can reduce from maps or objects as well. 
+
+The transform function has the following signature.
+
+```` javascript
+
+(memo, value, key, {withs}) => newMemo
+
+````
+
+The memo is initialized with a blank version of however the target data is stored
+and replaces the target when all from values are computed into it. 
+
+it is applied to Array and Map values in order; ordering of Object keys/values
+is not guaranteed. 
+
+### filterTo
+
+FilterTo takes the entire from data and transforms it into a value that
+replaces the target collection. 
+
+The transform function has the following signature.
+
+```` javascript
+
+(from, {withs}) => newMemo
+
+````
 
 ## Modifying data and triggering updates
 

@@ -66,7 +66,7 @@ describe('Data', () => {
         dataMap = c.toData(map, 'theMap');
         keysChanged = [];
 
-        dataMap.filterTo((theMap, change) => {
+        dataMap.filterTo((theMap, withs, change) => {
           if (change.data === 'theMap') {
             if (change.change.name) {
               keysChanged.push(change.change.name);
