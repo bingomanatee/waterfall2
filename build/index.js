@@ -1,4 +1,4 @@
-module.exports =
+const waterfall =
 /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -1537,3 +1537,5 @@ module.exports = require("eventemitter3");
 /***/ })
 /******/ ]);
 //# sourceMappingURL=index.js.map
+
+module.exports = waterfall.default;
