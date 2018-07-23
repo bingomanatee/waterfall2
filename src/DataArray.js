@@ -1,6 +1,6 @@
 import { cloneDeep, first, last, isEqual } from 'lodash';
 
-module.exports = (bottle) => {
+export default (bottle) => {
   bottle.factory('DataArray', c => class DataMap extends c.Data {
     get type() {
       return c.DATATYPE_ARRAY;

@@ -492,9 +492,106 @@ ${outTable}
     }
   });
 });
-// EXTERNAL MODULE: ./src/DataArray.js
-var DataArray = __webpack_require__(6);
+// CONCATENATED MODULE: ./src/DataArray.js
 
+
+/* harmony default export */ var DataArray = (bottle => {
+  bottle.factory('DataArray', c => class DataMap extends c.Data {
+    get type() {
+      return c.DATATYPE_ARRAY;
+    }
+
+    splice(index, removedCount, ...added) {
+      const addedCount = added.length;
+
+      const removed = this.content.splice(index, removedCount, ...added);
+      this.onChange({
+        type: 'splice', index, added, removed, addedCount, removedCount
+      });
+      return removed;
+    }
+    slice(...args) {
+      return this.content.slice(...args);
+    }
+    push(...added) {
+      this.splice(this.content.length, 0, ...added);
+    }
+    pop() {
+      if (!this.length) return null;
+      const result = Object(external__lodash_["last"])(this.content);
+      this.splice(this.length - 1, 1);
+      return result;
+    }
+    unshift(...added) {
+      return this.splice(0, 0, ...added);
+    }
+    get length() {
+      return this.content.length;
+    }
+
+    get size() {
+      return this.length;
+    }
+
+    cloneData(array) {
+      return array.slice(0);
+    }
+
+    equal(value) {
+      if (value.length !== this.length) return false;
+      return super.equal(value);
+    }
+
+    shift() {
+      if (!this.length) return null;
+      const out = Object(external__lodash_["first"])(this.content);
+      this.splice(0, 1);
+      return out;
+    }
+
+    remove(key) {
+      return this.splice(key, 1);
+    }
+
+    onChange(change) {
+      switch (change.type) {
+        case 'splice':
+          this.emit('change', { data: this.name, change });
+          this.onSplice(change);
+          break;
+
+        default:
+          super.onChange(change);
+      }
+    }
+
+    map(fn) {
+      return this.content.map(fn);
+    }
+
+    set(index, value) {
+      for (let i = this.length; i < index; ++i) {
+        super.set(i);
+      }
+      super.set(index, value);
+    }
+
+    onSplice(change) {
+      this.emit('splice', { data: this.name, change });
+    }
+    get keys() {
+      return Array.from(this.content.keys());
+    }
+
+    get values() {
+      return this.content.slice(0);
+    }
+
+    has(index) {
+      return index === Math.round(index) && index >= 0 && index < this.content.length;
+    }
+  });
+});
 // CONCATENATED MODULE: ./src/DataMap.js
 
 
@@ -1400,7 +1497,7 @@ var DataArray = __webpack_require__(6);
   const b = new external__bottlejs__default.a();
   src_Data(b);
   DataValue(b);
-  Object(DataArray["default"])(b);
+  DataArray(b);
   src_DataMap(b);
   src_DataObject(b);
   MapTo(b);
@@ -1436,144 +1533,6 @@ module.exports = require("text-table");
 /***/ (function(module, exports) {
 
 module.exports = require("eventemitter3");
-
-/***/ }),
-/* 6 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-/* WEBPACK VAR INJECTION */(function(module) {/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_lodash__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_lodash___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_lodash__);
-
-
-module.exports = bottle => {
-  bottle.factory('DataArray', c => class DataMap extends c.Data {
-    get type() {
-      return c.DATATYPE_ARRAY;
-    }
-
-    splice(index, removedCount, ...added) {
-      const addedCount = added.length;
-
-      const removed = this.content.splice(index, removedCount, ...added);
-      this.onChange({
-        type: 'splice', index, added, removed, addedCount, removedCount
-      });
-      return removed;
-    }
-    slice(...args) {
-      return this.content.slice(...args);
-    }
-    push(...added) {
-      this.splice(this.content.length, 0, ...added);
-    }
-    pop() {
-      if (!this.length) return null;
-      const result = Object(__WEBPACK_IMPORTED_MODULE_0_lodash__["last"])(this.content);
-      this.splice(this.length - 1, 1);
-      return result;
-    }
-    unshift(...added) {
-      return this.splice(0, 0, ...added);
-    }
-    get length() {
-      return this.content.length;
-    }
-
-    get size() {
-      return this.length;
-    }
-
-    cloneData(array) {
-      return array.slice(0);
-    }
-
-    equal(value) {
-      if (value.length !== this.length) return false;
-      return super.equal(value);
-    }
-
-    shift() {
-      if (!this.length) return null;
-      const out = Object(__WEBPACK_IMPORTED_MODULE_0_lodash__["first"])(this.content);
-      this.splice(0, 1);
-      return out;
-    }
-
-    remove(key) {
-      return this.splice(key, 1);
-    }
-
-    onChange(change) {
-      switch (change.type) {
-        case 'splice':
-          this.emit('change', { data: this.name, change });
-          this.onSplice(change);
-          break;
-
-        default:
-          super.onChange(change);
-      }
-    }
-
-    map(fn) {
-      return this.content.map(fn);
-    }
-
-    set(index, value) {
-      for (let i = this.length; i < index; ++i) {
-        super.set(i);
-      }
-      super.set(index, value);
-    }
-
-    onSplice(change) {
-      this.emit('splice', { data: this.name, change });
-    }
-    get keys() {
-      return Array.from(this.content.keys());
-    }
-
-    get values() {
-      return this.content.slice(0);
-    }
-
-    has(index) {
-      return index === Math.round(index) && index >= 0 && index < this.content.length;
-    }
-  });
-};
-/* WEBPACK VAR INJECTION */}.call(__webpack_exports__, __webpack_require__(7)(module)))
-
-/***/ }),
-/* 7 */
-/***/ (function(module, exports) {
-
-module.exports = function(originalModule) {
-	if(!originalModule.webpackPolyfill) {
-		var module = Object.create(originalModule);
-		// module.parent = undefined by default
-		if(!module.children) module.children = [];
-		Object.defineProperty(module, "loaded", {
-			enumerable: true,
-			get: function() {
-				return module.l;
-			}
-		});
-		Object.defineProperty(module, "id", {
-			enumerable: true,
-			get: function() {
-				return module.i;
-			}
-		});
-		Object.defineProperty(module, "exports", {
-			enumerable: true,
-		});
-		module.webpackPolyfill = 1;
-	}
-	return module;
-};
-
 
 /***/ })
 /******/ ]);
