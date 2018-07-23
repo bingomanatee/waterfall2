@@ -61,6 +61,7 @@ export default(bottle) => {
     }
 
     onChange() {
+      if (!this._inited) return;
       this.map();
     }
 

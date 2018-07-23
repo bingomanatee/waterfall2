@@ -1,12 +1,11 @@
 /* eslint-disable no-restricted-syntax */
-import { difference, cloneDeep, includes, first, last, zip } from 'lodash';
+import { difference, cloneDeep, includes, first, last, zip, isEqual } from 'lodash';
 import textTable from 'text-table';
 import EventEmitter from 'eventemitter3';
 
 const KNOWN_TYPES = 'add,remove,delete,replace,change,update'.split(',');
 
 export default (bottle) => {
-
   /**
    * the base class for Data variations
    */
@@ -85,11 +84,17 @@ export default (bottle) => {
         return cloneDeep(value);
       }
 
+      equal(value) {
+        return isEqual(value, this.content);
+      }
+
       set content(value) {
         if (this._content) {
           const vType = c.dataType(value);
           if (vType !== this.type) throw new Error(`cannot replace  ${this.type.toString()} with type ${vType.toString()}`);
+          if (this.equal(value)) { return; }
         }
+
         value = this.cloneData(value);
 
         if (this._activeTrans) {
@@ -145,6 +150,8 @@ export default (bottle) => {
       set(name, value) {
         if (this.has(name)) {
           const oldValue = this.get(name);
+          if (isEqual(value, oldValue)) return;
+
           if (this._activeTrans) {
             this._activeTrans.newContent[name] = value;
           } else { this.content[name] = value; }

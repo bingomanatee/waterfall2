@@ -1,4 +1,4 @@
-import { cloneDeep, first, last } from 'lodash';
+import { cloneDeep, first, last, isEqual } from 'lodash';
 
 module.exports = (bottle) => {
   bottle.factory('DataArray', c => class DataMap extends c.Data {
@@ -38,6 +38,11 @@ module.exports = (bottle) => {
 
     cloneData(array) {
       return array.slice(0);
+    }
+
+    equal(value) {
+      if (value.length !== this.length) return false;
+      return super.equal(value);
     }
 
     shift() {

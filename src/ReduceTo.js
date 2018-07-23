@@ -48,9 +48,12 @@ export default(b) => {
     }
 
     onChange(change) {
+      if (!this._inited) return;
       let memo = c.blankOf(this.targetType);
+      const callback = this.callback;
+
       Array.from(this.from.entries).forEach(([key, value]) => {
-        memo = this.callback(memo, value, key, change, this._withObj);
+        memo = callback(memo, value, key, change, this._withObj);
       });
 
       if (this.target) {

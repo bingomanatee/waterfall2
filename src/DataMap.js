@@ -1,4 +1,4 @@
-import { cloneDeep } from 'lodash';
+import { cloneDeep, isEqual } from 'lodash';
 
 export default (bottle) => {
   bottle.factory('DataMap', c => class DataMap extends c.Data {
@@ -34,10 +34,18 @@ export default (bottle) => {
       return new Map(map);
     }
 
+    equal(value) {
+      if (this.size !== value.size) return false;
+      return super.equal(value);
+    }
+
     set(name, value) {
       if (typeof name === 'undefined') throw new Error('cannot set undefined', name);
       if (this.has(name)) {
         const oldValue = this.get(name);
+        if (isEqual(value, oldValue)) {
+          return;
+        }
         if (this._activeTrans) {
           this._activeTrans.newContent.set(name, value);
         } else { this.content.set(name, value); }

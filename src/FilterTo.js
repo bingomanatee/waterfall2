@@ -38,6 +38,7 @@ export default(b) => {
      * @param change
      */
     onChange(change) {
+      if (!this._inited) return;
       const result = this.callback(this.from.content, change, this._withObj);
       if (this.target) {
         if (this.target instanceof c.Data) {

@@ -1,4 +1,4 @@
-import { cloneDeep } from 'lodash';
+import { cloneDeep, isEqual } from 'lodash';
 
 export default (bottle) => {
   bottle.factory('DataValue', c => class DataMap extends c.Data {
@@ -11,6 +11,7 @@ export default (bottle) => {
 
     set content(newValue) {
       const oldValue = this._content || null;
+      if (isEqual(this._content, newValue)) return;
       this._content = newValue;
       this.onChange({
         type: 'replace',

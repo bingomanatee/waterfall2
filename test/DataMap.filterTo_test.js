@@ -72,7 +72,7 @@ describe('Data', () => {
               keysChanged.push(change.change.name);
             }
           }
-        });
+        }).init();
       });
 
       it('should start empty', () => {

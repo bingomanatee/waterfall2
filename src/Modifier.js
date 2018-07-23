@@ -34,6 +34,7 @@ export default(b) => {
       this.from = from;
       this.callback = callback;
       this.withData = withData;
+      this._inited = false;
     }
 
     get withData() {
@@ -126,7 +127,8 @@ export default(b) => {
     }
 
     init() {
-      return this.onChange(null);
+      this._inited = true;
+      if (this.target) this.onChange(null);
     }
 
     into(target, init = false) {

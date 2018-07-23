@@ -13,6 +13,7 @@
     "@neutrinojs/airbnb-base": "^8.3.0",
     "@neutrinojs/jest": "^8.3.0",
     "@neutrinojs/node": "^8.3.0",
+    "faker": "^4.1.0",
     "neutrino": "^8.3.0"
   },
   "dependencies": {
