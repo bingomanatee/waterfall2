@@ -1,4 +1,4 @@
-/* eslint-disable no-restricted-syntax */
+/* eslint-disable no-restricted-syntax,no-useless-escape */
 import { difference, cloneDeep, includes, first, last, zip, isEqual } from 'lodash';
 import textTable from 'text-table';
 import EventEmitter from 'eventemitter3';
@@ -174,7 +174,7 @@ export default (bottle) => {
 
       get typeName() {
         const str = this.type.toString();
-        return (/\(([^[\)\(]*)\)/.exec(str)[1]);
+        return (/\(([^[)(]*)\)/.exec(str)[1]);
       }
 
       onChange(change) {
@@ -213,8 +213,10 @@ export default (bottle) => {
         isHorizontal = true, maxItems = null, cellRenderer = null, alignValue = 'l',
       }) {
         const data = [];
+        // eslint-disable-next-line prefer-destructuring
         let keys = this.keys;
         if (maxItems) keys = keys.slice(0, maxItems);
+        // eslint-disable-next-line prefer-destructuring
         let values = this.values;
         if (!values) {
           console.log('cant get values for ', this.name);
