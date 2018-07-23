@@ -142,6 +142,14 @@ Modifiers don't activate until you call `.init()` on them.
 This is to allow time for currying methods to add any needed input
 to the modifier. 
 
+### withs
+
+Sometimes you want to watch and incorporate related data. A classic 
+example is when you want to watch for a change in the page in a 
+pagination reducer, or a search term in a search reducer. 
+
+Withs are passed 
+
 ### mapTo
 
 ToMap takes a function that copies the modified value fromm the original 
@@ -191,6 +199,23 @@ The transform function has the following signature.
 
 ````
 
+(From in this context is the raw data stored in the from Data collection --
+an Array, Map, Object.)
+
+### keyTo
+
+KeyTo stores the values (untransformed) of the From Data in keys
+provided by the transform function into the target. Useful for indexing items
+by ID. 
+
+The key transform function's signature is 
+
+```` javascript
+
+(value, key, {withs}) => newKey
+
+````
+
 ## Modifying data and triggering updates
 
 There is no "magic" observation of data; i.e., using array notation or 
@@ -209,3 +234,16 @@ As much as possible, change is limited, depending on the nature of the
 modifier that connects it to other Data. For instance, if you link one
 collection to another using the mapTo method and change a single value,
 only a single mapped element is recalculated. 
+
+### Type enforcement
+
+The Data collections are type-insulated; that is, each is built to contain
+a specific data model (Map, Array, Object or value (scalar)). If you attempt
+to replace its contents with a different type of data it will throw an error. 
+
+## Reporting
+
+If you are having issues with data not piping or expected or value state,
+each Data collection has a `toTable()` method that produces a partial or
+complete list of the Data collection as well as the incoming and outgoing
+Modifiers related to it. 
